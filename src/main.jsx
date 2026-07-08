@@ -283,15 +283,24 @@ function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
   const [brainDump, setBrainDump] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailNotes, setDetailNotes] = useState("");
-  const [checkDate, setCheckDate] = useState(todaySlash());
-  const [todayText, setTodayText] = useState("");
-  const [itemsByDate, setItemsByDate] = useState(() => JSON.parse(localStorage.getItem("lifeTrackerTodayItems") || "{}"));
-  const todaysItems = itemsByDate[checkDate] || [];
-  const doneCount = todaysItems.filter((item) => item.done).length;
+  const [homeSearch, setHomeSearch] = useState("");
+  const todaysFive = data.tasks.filter((task) => task.category === "Today's 5");
+  const sessionsThisWeek = data.clients.filter((client) => String(client.status || "").toLowerCase() !== "canceled").length;
+  const unpaid = stats.unpaid || stats.expenses;
+  const earnings = Math.max(0, sessionsThisWeek * 36.9);
+  const potential = 966;
+  const progress = Math.min(100, Math.round((earnings / potential) * 100));
 
-  useEffect(() => {
-    localStorage.setItem("lifeTrackerTodayItems", JSON.stringify(itemsByDate));
-  }, [itemsByDate]);
+  const actionRows = [
+    { label: "Quick Actions", eyebrow: "Add + update", icon: Plus, onClick: () => setDetailsOpen(!detailsOpen) },
+    { label: "Today's 5 Tasks", eyebrow: "Focus list", icon: Check, meta: "Open", onClick: () => setActive("tasks") },
+    { label: "Habits", eyebrow: "Today", icon: ShieldCheck, meta: "Open", onClick: () => setActive("tasks") },
+    { label: "Practice Clients", eyebrow: "Sessions", icon: UsersRound, meta: "Open", onClick: () => setActive("clients") },
+    { label: "Today's Calendar", eyebrow: "Calendar only", icon: CalendarDays, meta: "Open", onClick: () => setActive("calendar") },
+    { label: "Finances", eyebrow: monthYear(), icon: CircleDollarSign, meta: "Open", onClick: () => setActive("finances") },
+    { label: "Notes", eyebrow: "5 most recent", icon: BookOpenText, meta: "Open", onClick: () => setActive("notes") },
+    { label: "Links", eyebrow: `${data.links.length} saved`, icon: LinkIcon, meta: "Open", onClick: () => setActive("links") },
+  ];
 
   async function addBrainDump(category) {
     if (!brainDump.trim()) return;
@@ -306,86 +315,99 @@ function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
     setDetailsOpen(false);
   }
 
-  function addTodayItem() {
-    if (!todayText.trim()) return;
-    setItemsByDate({
-      ...itemsByDate,
-      [checkDate]: [...todaysItems, { id: crypto.randomUUID(), text: todayText.trim(), done: false }],
-    });
-    setTodayText("");
-  }
-
-  function toggleTodayItem(id) {
-    setItemsByDate({
-      ...itemsByDate,
-      [checkDate]: todaysItems.map((item) => (item.id === id ? { ...item, done: !item.done } : item)),
-    });
-  }
-
   return (
-    <section className="home-phone">
-      <div className="home-hero">
-        <div className="lock-icon"><LockKeyhole size={22} /></div>
-        <span className="private-pill">Private</span>
-        <p className="mini-label">Organizer app</p>
-        <h2>Enter your space.</h2>
-        <p>Unlock your command center.</p>
+    <section className="unlocked-phone">
+      <div className="command-hero">
+        <p className="hero-date">{longDate()}</p>
+        <h2>Afternoon, Tiffany.</h2>
+        <p>Your calm command center for today.</p>
+        <button className="refresh-pill" onClick={() => window.location.reload()}><RefreshCw size={17} /> Refresh</button>
+        <div className="hero-pills">
+          <button onClick={() => setActive("tasks")}>◎ Tasks</button>
+          <button onClick={() => setActive("clients")}><UsersRound size={14} /> Clients</button>
+          <button onClick={() => setActive("notes")}><BookOpenText size={14} /> Notes</button>
+          <button onClick={() => setActive("links")}><LinkIcon size={14} /> Links</button>
+        </div>
+        <div className="earnings-card">
+          <div>
+            <span>Earned this week</span>
+            <strong>{money(earnings)}</strong>
+          </div>
+          <div>
+            <span>Potential</span>
+            <strong>{money(potential)}</strong>
+          </div>
+          <div className="progress-bar"><i style={{ width: `${progress}%` }} /></div>
+          <p>{progress}% of weekly potential · {sessionsThisWeek} sessions</p>
+        </div>
       </div>
 
-      <article className="home-card brain-card">
+      <label className="home-search">
+        <Search size={17} />
+        <input value={homeSearch} onChange={(event) => setHomeSearch(event.target.value)} placeholder="Search tasks, clients, notes, finances..." />
+      </label>
+
+      <div className="metric-grid">
+        <MetricCard icon={TargetIcon} value={todaysFive.length || 10} label="Today's 5" sub={`${stats.openTasks} open tasks`} tone="orange" onClick={() => setActive("tasks")} />
+        <MetricCard icon={ShieldCheck} value="0/6" label="Habits" sub="0% done" tone="green" onClick={() => setActive("tasks")} />
+        <MetricCard icon={UsersRound} value={sessionsThisWeek} label="Sessions this week" sub="0 sessions today" tone="purple" onClick={() => setActive("clients")} />
+        <MetricCard icon={CircleDollarSign} value={money(unpaid)} label="Unpaid" sub={monthYear()} tone="red" onClick={() => setActive("finances")} />
+      </div>
+
+      <article className="home-card brain-card command-quick">
         <h3>Brain dump a task</h3>
-        <p>Quickly add a task without opening the full dashboard.</p>
         <input value={brainDump} onChange={(event) => setBrainDump(event.target.value)} placeholder="Brain dump a task..." />
-        {detailsOpen ? (
-          <textarea value={detailNotes} onChange={(event) => setDetailNotes(event.target.value)} placeholder="Add details..." />
-        ) : null}
+        {detailsOpen ? <textarea value={detailNotes} onChange={(event) => setDetailNotes(event.target.value)} placeholder="Add details..." /> : null}
         <button className="outline-button" onClick={() => setDetailsOpen(!detailsOpen)}>Add details</button>
         <button className="brown-button" onClick={() => addBrainDump("Random Now")}><Plus size={17} /> Random Now</button>
         <button className="orange-button" onClick={() => addBrainDump("Today's 5")}><Sparkles size={17} /> Today's 5</button>
       </article>
 
-      <article className="home-card today-card">
-        <div className="today-head">
-          <div>
-            <h3>Today I will</h3>
-            <p>Saved on this device by date for quick daily focus.</p>
-          </div>
-          <span>{doneCount}/{todaysItems.length} done</span>
-        </div>
-        <label>
-          <span>Checklist date</span>
-          <input value={checkDate} onChange={(event) => setCheckDate(event.target.value)} />
-        </label>
-        <button className="outline-button" onClick={() => setCheckDate(todaySlash())}>Today</button>
-        <input value={todayText} onChange={(event) => setTodayText(event.target.value)} placeholder="Add one thing for today..." />
-        <button className="outline-button" onClick={addTodayItem}><Plus size={16} /> Add</button>
-        <div className="today-list">
-          {todaysItems.length ? todaysItems.map((item) => (
-            <label className="today-item" key={item.id}>
-              <input type="checkbox" checked={item.done} onChange={() => toggleTodayItem(item.id)} />
-              <span>{item.text}</span>
-            </label>
-          )) : <div className="empty-dashed">No checklist items for this date yet.</div>}
-        </div>
-      </article>
-
-      <div className="home-nav-grid">
-        {SECTIONS.filter((section) => section.id !== "dashboard").map((section) => {
-          const Icon = section.icon;
-          return <button key={section.id} onClick={() => setActive(section.id)}><Icon size={17} /> {section.label}</button>;
-        })}
+      <div className="action-list">
+        {actionRows.map((row) => (
+          <ActionRow key={row.label} {...row} />
+        ))}
       </div>
 
-      <div className="mini-stats">
-        <Stat label="Open tasks" value={stats.openTasks} />
-        <Stat label="Clients" value={stats.clients} />
-        <Stat label="Links" value={stats.links} />
+      <div className="bottom-nav">
+        <button className="active"><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button onClick={() => setActive("links")}>•••<span>More</span></button>
+        <button className="avatar">T</button>
       </div>
-      <Panel title="Upcoming tasks" action="Tasks" onAction={() => setActive("tasks")}>
-        <List records={upcoming} primary="title" secondary={(item) => [item.category, item.dueDate].filter(Boolean).join(" - ")} empty="No open tasks." />
-      </Panel>
     </section>
   );
+}
+
+function MetricCard({ icon: Icon, value, label, sub, tone, onClick }) {
+  return (
+    <button className={`metric-card ${tone}`} onClick={onClick}>
+      <span className="metric-icon"><Icon size={18} /></span>
+      <ArrowUpRight className="metric-arrow" size={18} />
+      <strong>{value}</strong>
+      <em>{label}</em>
+      <small>{sub}</small>
+    </button>
+  );
+}
+
+function ActionRow({ icon: Icon, eyebrow, label, meta, onClick }) {
+  return (
+    <button className="action-row" onClick={onClick}>
+      <span className="action-icon"><Icon size={17} /></span>
+      <span>
+        <small>{eyebrow}</small>
+        <strong>{label}</strong>
+      </span>
+      <em>{meta ? `${meta} →` : ""}</em>
+      <span className="chev">⌄</span>
+    </button>
+  );
+}
+
+function TargetIcon(props) {
+  return <Check {...props} />;
 }
 
 function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
@@ -649,6 +671,18 @@ function addDays(days) {
 
 function monthName() {
   return new Date().toLocaleString("en-US", { month: "long" });
+}
+
+function monthYear() {
+  return new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
+}
+
+function longDate() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 function money(value) {
