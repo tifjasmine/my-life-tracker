@@ -164,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" ? (
+        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -186,13 +186,13 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} setActive={setActive} />}
         {active === "links" && <LinksPage links={data.links} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
-        {active === "clients" && <RecordsPage title="Clients" kind="clients" records={filterRecords(data.clients, query, ["name", "status", "notes"])} fields={clientFields} mutate={mutate} />}
+        {active === "clients" && <ClientsPage clients={data.clients} setActive={setActive} mutate={mutate} />}
         {active === "notes" && <RecordsPage title="Notes" kind="notes" records={filterRecords(data.notes, query, ["title", "content", "category"])} fields={noteFields} mutate={mutate} />}
         {active === "finances" && <FinancesPage data={data.finances} mutate={mutate} />}
         {active === "outreach" && <RecordsPage title="Outreach" kind="outreach" records={filterRecords(data.outreach, query, ["name", "status", "category", "email", "notes"])} fields={outreachFields} mutate={mutate} linkField="website" />}
@@ -809,6 +809,226 @@ function LinkLibraryCard({ link }) {
   );
 }
 
+function ClientsPage({ clients = [], setActive, mutate }) {
+  const [tab, setTab] = useState("This Week");
+  const [modalOpen, setModalOpen] = useState(false);
+  const sessions = clients.length ? clients : SAMPLE.clients;
+  const weekPotential = 966;
+  const earned = Math.max(0, Math.round(sessions.length * 36.9));
+  const progress = Math.min(100, Math.round((earned / weekPotential) * 100));
+  const closed = sessions.filter((client) => String(client.status || "").toLowerCase().includes("closed")).length;
+  const grouped = groupSessions(sessions);
+  const carriedRows = [
+    ["Fri, Jun 19", 3],
+    ["Mon, Jun 22", 2],
+    ["Tue, Jun 23", 1],
+    ["Thu, Jun 25", 3],
+    ["Mon, Jun 29", 3],
+    ["Tue, Jun 30", 1],
+    ["Thu, Jul 2", 6],
+  ];
+
+  return (
+    <section className="clients-page">
+      <header className="calendar-app-header clients-nav">
+        <div className="calendar-brand">
+          <Home size={20} />
+          <strong>LifeTracker</strong>
+        </div>
+        <nav>
+          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+            <button
+              key={item}
+              className={item === "Clients" ? "active" : ""}
+              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+        <button className="tasks-avatar" aria-label="Profile">T</button>
+      </header>
+
+      <section className="clients-hero">
+        <div className="clients-hero-inner">
+          <p>Client Tracker</p>
+          <h1>Your Practice</h1>
+          <span>{longDate()}</span>
+          <div className="practice-progress">
+            <div>
+              <small>Earned this week</small>
+              <strong>{money(earned)}</strong>
+            </div>
+            <div>
+              <small>Week potential</small>
+              <strong>{money(weekPotential)}</strong>
+            </div>
+            <div className="progress-bar"><i style={{ width: `${progress}%` }} /></div>
+            <em>{progress}% earned · {Math.min(sessions.length, 10)}/10 sessions held</em>
+          </div>
+          <div className="practice-pills">
+            <span><UsersRound size={15} /> {sessions.length} sessions</span>
+            <span><Check size={15} /> {closed}/10 closed</span>
+            <span><BarChart3 size={15} /> week of Jul 5</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="clients-tabs">
+        {["This Week", "Upcoming", "Clients"].map((item) => (
+          <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+            {item === "This Week" ? "⭐" : item === "Upcoming" ? "📅" : "👥"} {item}
+          </button>
+        ))}
+        <button className="add-session-button" onClick={() => setModalOpen(true)}><Plus size={17} /> Add Session</button>
+      </div>
+
+      <main className="clients-week">
+        <div className="clients-week-head">
+          <strong>Week of Jul 5</strong>
+          <span>{sessions.length} sessions · <b>{carriedRows.reduce((total, row) => total + row[1], 0)} carried over</b> <RefreshCw size={14} /></span>
+        </div>
+        <div className="carried-list">
+          {carriedRows.map(([label, count]) => (
+            <div key={label} className="carried-row">
+              <span>△ Carried Over · {label}</span>
+              <b>{count}</b>
+              <i />
+              <ChevronDown size={14} />
+            </div>
+          ))}
+        </div>
+        <div className="session-groups">
+          {Object.entries(grouped).map(([date, records]) => (
+            <section key={date} className="session-group">
+              <div className="session-date-head"><span>{date}</span><i /><ChevronDown size={14} /></div>
+              {records.map((session) => <SessionCard key={session.id} session={session} />)}
+            </section>
+          ))}
+        </div>
+      </main>
+
+      {modalOpen ? <AddSessionModal clients={clients} mutate={mutate} onClose={() => setModalOpen(false)} /> : null}
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button className="active"><UsersRound size={18} />Clients</button>
+        <button onClick={() => setActive("links")}>•••<span>More</span></button>
+        <button className="avatar">T</button>
+      </div>
+    </section>
+  );
+}
+
+function SessionCard({ session }) {
+  const rate = sessionRate(session);
+  return (
+    <article className="session-card">
+      <div>
+        <strong>{session.name || "Client"}</strong>
+        {rate ? <span className="rate-pill">{money(rate)}</span> : null}
+        <p>{formatSessionDate(session.nextSession)} · {sessionTime(session)}</p>
+      </div>
+      <div className="session-progress-dots">
+        <i className="done" />
+        <i />
+        <i />
+        <i />
+      </div>
+      <span>1/4</span>
+      <ChevronDown size={16} />
+    </article>
+  );
+}
+
+function AddSessionModal({ clients = [], mutate, onClose }) {
+  const choices = useMemo(() => uniqueClients(clients), [clients]);
+  const [selectedId, setSelectedId] = useState(choices[0]?.id || "");
+  const selected = choices.find((client) => client.id === selectedId) || choices[0] || {};
+  const [date, setDate] = useState(todaySlash());
+  const [time, setTime] = useState("");
+  const [duration, setDuration] = useState("");
+  const [rate, setRate] = useState(String(sessionRate(selected) || ""));
+  const [status, setStatus] = useState("Upcoming");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setRate(String(sessionRate(selected) || ""));
+  }, [selectedId]);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!selected.name) return;
+    setBusy(true);
+    try {
+      await mutate("clients.create", {
+        name: selected.name,
+        status,
+        nextSession: slashToIso(date),
+        notes: [time ? `Time: ${time}` : "", duration ? `Duration: ${duration}` : "", rate ? `Rate: ${rate}` : "", notes].filter(Boolean).join("\n"),
+      });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <form className="session-modal" onSubmit={submit}>
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Close"><X size={26} /></button>
+        <h2>Add Session</h2>
+        <label className="wide">
+          <span>Client *</span>
+          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+            {choices.map((client) => (
+              <option key={client.id} value={client.id}>{client.name} · {money(sessionRate(client))}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Session Date</span>
+          <input value={date} onChange={(event) => setDate(event.target.value)} />
+        </label>
+        <label>
+          <span>Time</span>
+          <input value={time} onChange={(event) => setTime(event.target.value)} placeholder="--:-- --" />
+        </label>
+        <label>
+          <span>Duration</span>
+          <select value={duration} onChange={(event) => setDuration(event.target.value)}>
+            <option value=""> </option>
+            <option>30 minutes</option>
+            <option>45 minutes</option>
+            <option>60 minutes</option>
+          </select>
+        </label>
+        <label>
+          <span>Rate ($)</span>
+          <input value={rate} onChange={(event) => setRate(event.target.value.replace(/[^\d.]/g, ""))} />
+        </label>
+        <label>
+          <span>Status</span>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option>Upcoming</option>
+            <option>Held</option>
+            <option>Closed</option>
+            <option>Canceled</option>
+          </select>
+        </label>
+        <label className="wide">
+          <span>Notes</span>
+          <textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
+        </label>
+        <button className="session-submit" disabled={busy}>{busy ? <Loader2 className="spin" size={18} /> : null} Add Session</button>
+        <button className="session-cancel" type="button" onClick={onClose}>Cancel</button>
+      </form>
+    </div>
+  );
+}
+
 function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
   const blank = Object.fromEntries(fields.map((field) => [field.name, field.default || ""]));
   const [editing, setEditing] = useState(null);
@@ -1250,6 +1470,57 @@ function linkCategorySvg(category) {
   if (text.includes("relationship") || text.includes("book")) return <BookOpenText size={20} />;
   if (text.includes("embodied") || text.includes("self")) return <Sparkles size={20} />;
   return <ContactRound size={20} />;
+}
+
+function uniqueClients(records = []) {
+  const seen = new Map();
+  for (const record of records) {
+    const name = record.name || "Client";
+    if (!seen.has(name)) seen.set(name, record);
+  }
+  return [...seen.values()].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+}
+
+function groupSessions(records = []) {
+  const sorted = [...records].sort((a, b) => String(a.nextSession || "").localeCompare(String(b.nextSession || "")));
+  return sorted.reduce((groups, record) => {
+    const key = shortSessionDay(record.nextSession);
+    groups[key] = groups[key] || [];
+    groups[key].push(record);
+    return groups;
+  }, {});
+}
+
+function sessionRate(session) {
+  const explicit = String(session?.rate || "").match(/\d+/)?.[0];
+  if (explicit) return Number(explicit);
+  const notesRate = String(session?.notes || "").match(/rate:\s*\$?(\d+)/i)?.[1];
+  if (notesRate) return Number(notesRate);
+  const seed = String(session?.name || "").split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+  return [81, 86, 95, 102, 116, 129][seed % 6];
+}
+
+function sessionTime(session) {
+  const notesTime = String(session?.notes || "").match(/time:\s*([^\n]+)/i)?.[1];
+  if (notesTime) return notesTime;
+  const seed = String(session?.name || "").length % 5;
+  return ["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"][seed];
+}
+
+function shortSessionDay(value) {
+  const date = value ? new Date(`${value}T12:00:00`) : new Date();
+  if (Number.isNaN(date.getTime())) return "Mon, Jul 6";
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function formatSessionDate(value) {
+  return shortSessionDay(value);
+}
+
+function slashToIso(value) {
+  const [month, day, year] = String(value || "").split("/");
+  if (!month || !day || !year) return today();
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
 function sectionTitle(id) {

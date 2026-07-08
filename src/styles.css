@@ -1981,6 +1981,360 @@ textarea {
   font-weight: 900;
 }
 
+.clients-page {
+  min-height: calc(100vh - 56px);
+  margin: -28px;
+  padding-bottom: 84px;
+  background: #f7f0e8;
+}
+
+.clients-hero {
+  background: var(--brown-dark);
+  color: #fffaf3;
+}
+
+.clients-hero-inner {
+  width: min(100%, 700px);
+  margin: 0 auto;
+  padding: 34px 18px 24px;
+}
+
+.clients-hero p {
+  margin: 0 0 6px;
+  color: #ffbd78;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.clients-hero h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  line-height: 1;
+}
+
+.clients-hero > span,
+.clients-hero-inner > span {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 250, 243, 0.72);
+}
+
+.practice-progress {
+  margin-top: 16px;
+  border-radius: 14px;
+  background: rgba(255, 250, 243, 0.12);
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 9px;
+}
+
+.practice-progress small,
+.practice-progress em {
+  color: rgba(255, 250, 243, 0.7);
+  font-style: normal;
+}
+
+.practice-progress small,
+.practice-progress strong {
+  display: block;
+}
+
+.practice-progress strong {
+  color: #62f29c;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.practice-progress > div:nth-child(2) {
+  text-align: right;
+}
+
+.practice-progress > div:nth-child(2) strong {
+  color: #fffaf3;
+  font-size: 1.25rem;
+  margin-top: 10px;
+}
+
+.practice-progress .progress-bar {
+  grid-column: 1 / -1;
+}
+
+.practice-progress em {
+  grid-column: 1 / -1;
+  font-size: 0.84rem;
+}
+
+.practice-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.practice-pills span {
+  min-height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 250, 243, 0.12);
+  color: #fffaf3;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.clients-tabs {
+  min-height: 50px;
+  border-bottom: 1px solid rgba(118, 72, 44, 0.14);
+  background: #fffaf4;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 18px;
+}
+
+.clients-tabs button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #4a2414;
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.clients-tabs button.active {
+  background: #20140e;
+  color: #fffaf3;
+}
+
+.clients-tabs .add-session-button {
+  margin-left: auto;
+  border-radius: 9px;
+  background: #c56500;
+  color: #fffaf3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clients-week {
+  width: min(100%, 680px);
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.clients-week-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #5b4a3f;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.clients-week-head span {
+  text-transform: none;
+}
+
+.clients-week-head b,
+.carried-row span,
+.carried-row svg {
+  color: #d56c00;
+}
+
+.carried-list {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 18px;
+}
+
+.carried-row {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.carried-row b {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff1b8;
+  color: #d56c00;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+}
+
+.carried-row i,
+.session-date-head i {
+  height: 1px;
+  background: rgba(118, 72, 44, 0.18);
+}
+
+.session-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.session-date-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #5b4a3f;
+  text-transform: uppercase;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.session-card {
+  min-height: 112px;
+  border: 1px solid rgba(118, 72, 44, 0.14);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(74, 36, 20, 0.11);
+  padding: 20px 18px;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.session-card strong {
+  color: #2f251f;
+}
+
+.session-card p {
+  margin: 6px 0 0;
+  color: #5c514b;
+  font-size: 0.9rem;
+}
+
+.rate-pill {
+  margin-left: 7px;
+  border-radius: 999px;
+  background: #c9f5d8;
+  color: #17713e;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.session-progress-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.session-progress-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #d8d4cf;
+}
+
+.session-progress-dots i.done {
+  background: #18c86b;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.72);
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: 8vh 18px 40px;
+  overflow: auto;
+}
+
+.session-modal {
+  position: relative;
+  width: min(100%, 680px);
+  border: 1px solid rgba(118, 72, 44, 0.22);
+  border-radius: 18px;
+  background: #fff7ef;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+  padding: 44px 48px 34px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 28px;
+}
+
+.session-modal h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: center;
+  font-size: 2rem;
+}
+
+.session-modal label span {
+  margin-bottom: 12px;
+  color: #241915;
+  font-size: 1.05rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.session-modal input,
+.session-modal select,
+.session-modal textarea {
+  min-height: 58px;
+  border: 1px solid rgba(118, 72, 44, 0.14);
+  border-radius: 13px;
+  background: #fffaf3;
+  box-shadow: 0 4px 12px rgba(74, 36, 20, 0.08);
+  font-size: 1.15rem;
+}
+
+.session-modal textarea {
+  min-height: 126px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 26px;
+  right: 26px;
+  border: 0;
+  background: transparent;
+  color: #6d625a;
+}
+
+.session-submit,
+.session-cancel {
+  grid-column: 1 / -1;
+  min-height: 66px;
+  border-radius: 13px;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.session-submit {
+  background: #c56500;
+  color: #fffaf3;
+}
+
+.session-cancel {
+  background: #fffaf3;
+  color: #241915;
+  border: 1px solid rgba(118, 72, 44, 0.14);
+  box-shadow: 0 4px 12px rgba(74, 36, 20, 0.08);
+}
+
 .bottom-nav {
   position: fixed;
   left: 50%;
@@ -2074,6 +2428,60 @@ textarea {
     margin: -18px;
     min-height: 100vh;
     background: #f7f0e8;
+  }
+
+  .clients-page {
+    margin: -18px;
+    min-height: 100vh;
+  }
+
+  .clients-nav {
+    display: none;
+  }
+
+  .clients-hero-inner {
+    padding: 30px 22px 24px;
+  }
+
+  .clients-tabs {
+    justify-content: start;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .clients-tabs .add-session-button {
+    margin-left: 0;
+    flex: 0 0 auto;
+  }
+
+  .clients-week {
+    padding: 16px 14px 84px;
+  }
+
+  .clients-week-head {
+    font-size: 0.78rem;
+  }
+
+  .session-card {
+    min-height: 112px;
+    padding: 20px 16px;
+    grid-template-columns: 1fr auto auto auto;
+  }
+
+  .modal-backdrop {
+    padding: 52px 18px 28px;
+    place-items: start center;
+  }
+
+  .session-modal {
+    padding: 44px 28px 28px;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+
+  .session-modal h2 {
+    font-size: 1.9rem;
   }
 
   .links-nav {
@@ -2251,6 +2659,10 @@ textarea {
     display: none;
   }
 
+  .clients-page .bottom-nav {
+    display: none;
+  }
+
   .tasks-page .bottom-nav {
     display: none;
   }
@@ -2315,6 +2727,39 @@ textarea {
 
   .links-hero > span {
     font-size: 0.92rem;
+  }
+
+  .practice-progress {
+    grid-template-columns: 1fr auto;
+  }
+
+  .carried-row {
+    grid-template-columns: minmax(0, auto) auto 1fr auto;
+    font-size: 0.76rem;
+  }
+
+  .session-card {
+    gap: 8px;
+  }
+
+  .session-progress-dots {
+    gap: 4px;
+  }
+
+  .session-modal {
+    width: min(100%, 620px);
+    padding-inline: 22px;
+  }
+
+  .session-modal label {
+    grid-column: 1 / -1;
+  }
+
+  .session-modal label:not(.wide):nth-of-type(2),
+  .session-modal label:not(.wide):nth-of-type(3),
+  .session-modal label:not(.wide):nth-of-type(4),
+  .session-modal label:not(.wide):nth-of-type(5) {
+    grid-column: auto;
   }
 
   .welcome-panel {
