@@ -164,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" ? (
+        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" && active !== "finances" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -186,7 +186,7 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" && active !== "finances" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
@@ -194,7 +194,7 @@ function App() {
         {active === "links" && <LinksPage links={data.links} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "clients" && <ClientsPage clients={data.clients} setActive={setActive} mutate={mutate} />}
         {active === "notes" && <NotesPage notes={data.notes} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
-        {active === "finances" && <FinancesPage data={data.finances} mutate={mutate} />}
+        {active === "finances" && <FinancesPage data={data.finances} mutate={mutate} setActive={setActive} />}
         {active === "outreach" && <RecordsPage title="Outreach" kind="outreach" records={filterRecords(data.outreach, query, ["name", "status", "category", "email", "notes"])} fields={outreachFields} mutate={mutate} linkField="website" />}
       </main>
     </div>
@@ -1339,26 +1339,166 @@ function CalendarPage({ tasks, mutate, setActive }) {
   );
 }
 
-function FinancesPage({ data, mutate }) {
+function FinancesPage({ data, mutate, setActive }) {
   const [tab, setTab] = useState("expenses");
-  const records = data?.[tab] || [];
-  const fields = tab === "expenses" ? expenseFields : tab === "income" ? incomeFields : debtFields;
+  const [status, setStatus] = useState("All");
+  const [search, setSearch] = useState("");
+  const [month, setMonth] = useState(monthName());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+  const expenses = data?.expenses || [];
+  const income = data?.income || [];
+  const debt = data?.debt || [];
+  const expenseTotal = sum(expenses, "amount");
+  const paidTotal = sum(expenses.filter((item) => item.paid), "amount");
+  const unpaidTotal = sum(expenses.filter((item) => !item.paid), "amount");
+  const incomeTotal = sum(income, "amount");
+  const debtTotal = sum(debt, "remaining");
+  const paymentTotal = sum(debt, "payment");
+  const progress = expenseTotal ? Math.round((paidTotal / expenseTotal) * 100) : 0;
+  const records = tab === "expenses" ? expenses : tab === "income" ? income : debt;
+  const filtered = records.filter((record) => {
+    const term = search.trim().toLowerCase();
+    const paidMatch = tab !== "expenses" || status === "All" || (status === "Paid" ? record.paid : !record.paid);
+    const termMatch = !term || [record.name, record.source, record.category, record.frequency, record.notes].some((value) => String(value || "").toLowerCase().includes(term));
+    return paidMatch && termMatch;
+  });
+
+  async function togglePaid(record) {
+    await mutate("finances.expenses.update", { ...record, paid: !record.paid });
+  }
+
+  async function deleteExpense(record) {
+    if (!window.confirm("Delete this finance item?")) return;
+    await mutate(`finances.${tab}.delete`, record);
+  }
 
   return (
-    <section className="section-stack">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Money</p>
-          <h2>Finances</h2>
+    <section className="finances-page">
+      <header className="calendar-app-header finances-nav">
+        <div className="calendar-brand">
+          <Home size={20} />
+          <strong>LifeTracker</strong>
         </div>
-        <div className="tabs">
+        <nav>
+          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+            <button
+              key={item}
+              className={item === "Finances" ? "active" : ""}
+              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+        <button className="tasks-avatar" aria-label="Profile">T</button>
+      </header>
+
+      <div className="finances-shell">
+        <header className="finances-title">
+          <h1>💰 Finances</h1>
+          <p>{month} {year}</p>
+        </header>
+
+        <section className="finance-summary-grid">
+          <FinanceSummary label="Income" value={moneyCents(incomeTotal)} sub={`${income.length} records`} tone="green" />
+          <FinanceSummary label="Expenses" value={moneyCents(expenseTotal)} sub={`${expenses.filter((item) => !item.paid).length} unpaid`} />
+          <FinanceSummary label="Still Owe" value={moneyCents(unpaidTotal)} sub="expenses unpaid" tone="red" />
+          <FinanceSummary label="Total Debt 🏦 ▾" value={moneyCents(debtTotal)} sub={`${debt.length} active / ${debt.length || 0} total`} chip={`${moneyCents(paymentTotal)} payment total`} tone="red" />
+        </section>
+
+        <div className="finance-filters">
+          <select value={month} onChange={(event) => setMonth(event.target.value)}>
+            {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((item) => <option key={item}>{item}</option>)}
+          </select>
+          <select value={year} onChange={(event) => setYear(event.target.value)}>
+            {["2025", "2026", "2027"].map((item) => <option key={item}>{item}</option>)}
+          </select>
+          <label>
+            <Search size={15} />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search expenses, income, debt..." />
+          </label>
+        </div>
+
+        <div className="finance-tabs">
           {["expenses", "income", "debt"].map((item) => (
-            <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}</button>
+            <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+              {item === "expenses" ? "📋" : item === "income" ? "💵" : "🏦"} {capitalize(item)}
+            </button>
           ))}
         </div>
+
+        {tab === "expenses" ? (
+          <section className="expense-progress-card">
+            <div className="expense-totals">
+              <span><b>Amount</b>{moneyCents(expenseTotal)}</span>
+              <span className="green"><b>Paid</b>{moneyCents(paidTotal)}</span>
+              <span className="red"><b>Unpaid</b>{moneyCents(unpaidTotal)}</span>
+            </div>
+            <div className="finance-progress-label"><b>Progress</b><strong>{progress}%</strong></div>
+            <div className="finance-status-pills">
+              {["All", "Unpaid", "Paid"].map((item) => (
+                <button key={item} className={status === item ? "active" : ""} onClick={() => setStatus(item)}>{item}</button>
+              ))}
+            </div>
+            <div className="finance-progress-bar"><i style={{ width: `${progress}%` }} /></div>
+          </section>
+        ) : null}
+
+        <section className="finance-list">
+          {filtered.map((record) => (
+            <FinanceRow
+              key={record.id}
+              record={record}
+              tab={tab}
+              onTogglePaid={() => togglePaid(record)}
+              onDelete={() => deleteExpense(record)}
+            />
+          ))}
+          {!filtered.length ? <div className="empty-dashed">No finance records found.</div> : null}
+        </section>
       </div>
-      <RecordsPage title={tab} kind={`finances.${tab}`} records={records} fields={fields} mutate={mutate} />
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button className="active">•••<span>More</span></button>
+        <button className="avatar">T</button>
+      </div>
     </section>
+  );
+}
+
+function FinanceSummary({ label, value, sub, chip, tone }) {
+  return (
+    <article className={`finance-summary ${tone || ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <em>{sub}</em>
+      {chip ? <small>{chip}</small> : null}
+    </article>
+  );
+}
+
+function FinanceRow({ record, tab, onTogglePaid, onDelete }) {
+  const title = record.name || record.source || "Finance Item";
+  const amount = record.amount || record.remaining || record.payment || 0;
+  const paid = Boolean(record.paid);
+  return (
+    <article className="finance-row">
+      {tab === "expenses" ? <button className={`paid-dot ${paid ? "paid" : ""}`} onClick={onTogglePaid} aria-label={paid ? "Mark unpaid" : "Mark paid"} /> : null}
+      <div>
+        <h3>{title}</h3>
+        <div className="finance-row-pills">
+          {record.category ? <span>{record.category}</span> : null}
+          {record.frequency ? <span>{record.frequency}</span> : null}
+          {tab === "expenses" ? <span className={paid ? "paid" : "unpaid"}>{paid ? "Paid" : "Unpaid"}</span> : null}
+        </div>
+      </div>
+      <strong>{moneyCents(amount)}</strong>
+      <button className="finance-edit" aria-label="Edit finance item">✎</button>
+      <button className="finance-delete" onClick={onDelete} aria-label="Delete finance item">×</button>
+    </article>
   );
 }
 
@@ -1539,6 +1679,14 @@ function taskCategoryIcon(category) {
 
 function money(value) {
   return Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+
+function moneyCents(value) {
+  return Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
+function capitalize(value) {
+  return String(value || "").charAt(0).toUpperCase() + String(value || "").slice(1);
 }
 
 function normalizeUrl(url) {
