@@ -4,12 +4,15 @@
   color: #2f1c13;
   background: #f1e8dc;
   --cream: #fffaf4;
-  --sand: #f1e8dc;
-  --brown: #4a2414;
-  --brown-dark: #3d1e10;
-  --peach: #df9577;
-  --orange: #cb5728;
-  --line: #dfb999;
+  --sand: #f3ede3;
+  --brown: #3f2518;
+  --brown-dark: #1f1712;
+  --green: #173f35;
+  --green-soft: #e7f0df;
+  --sage: #6f8a58;
+  --peach: #df9a73;
+  --orange: #c9572a;
+  --line: #d9b895;
 }
 
 * {
@@ -43,7 +46,7 @@ button {
   top: 0;
   height: 100vh;
   padding: 22px;
-  background: #27403d;
+  background: linear-gradient(180deg, #173f35 0%, #112d27 100%);
   color: #fffaf3;
   display: flex;
   flex-direction: column;
@@ -63,7 +66,7 @@ button {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #d97745;
+  background: #79a66c;
   color: #fffaf3;
 }
 
@@ -97,7 +100,8 @@ button {
 
 .sidebar nav button:hover,
 .sidebar nav button.active {
-  background: rgba(255, 250, 243, 0.12);
+  background: rgba(231, 240, 223, 0.15);
+  box-shadow: inset 3px 0 0 #a8c98d;
 }
 
 .sidebar-note {
@@ -496,7 +500,7 @@ textarea {
   position: relative;
   min-height: 268px;
   padding: 34px 26px 28px;
-  background: var(--brown);
+  background: radial-gradient(circle at 85% 12%, rgba(168, 201, 141, 0.22), transparent 28%), linear-gradient(145deg, #173f35 0%, #3f2518 100%);
   color: var(--cream);
 }
 
@@ -506,8 +510,8 @@ textarea {
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: #f3aa63;
-  color: var(--brown);
+  background: #a8c98d;
+  color: #173f35;
   margin-bottom: 26px;
 }
 
@@ -528,7 +532,7 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.76rem;
-  color: #ffbd78;
+  color: #cbe6b3;
   font-weight: 900;
 }
 
@@ -774,13 +778,13 @@ textarea {
   padding: 14px 14px 86px;
   display: grid;
   gap: 16px;
-  background: linear-gradient(180deg, #f6efe7 0%, #efe2d4 100%);
+  background: linear-gradient(180deg, #f5f0e8 0%, #e7eee1 100%);
   min-height: calc(100vh - 56px);
   position: relative;
 }
 
 .command-hero {
-  background: var(--brown);
+  background: radial-gradient(circle at 85% 12%, rgba(168, 201, 141, 0.24), transparent 30%), linear-gradient(145deg, #173f35 0%, #3f2518 100%);
   color: var(--cream);
   border-radius: 22px;
   padding: 20px 18px;
@@ -791,7 +795,7 @@ textarea {
 
 .hero-date {
   margin: 0;
-  color: #f3aa63;
+  color: #cbe6b3;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 900;
@@ -1394,8 +1398,9 @@ textarea {
 .calendar-app-header {
   min-height: 56px;
   padding: 0 max(18px, calc((100% - 1120px) / 2));
-  background: #fff8ef;
-  border-bottom: 1px solid rgba(118, 72, 44, 0.1);
+  background: rgba(255, 250, 244, 0.94);
+  border-bottom: 1px solid rgba(23, 63, 53, 0.12);
+  box-shadow: 0 8px 22px rgba(23, 63, 53, 0.07);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -1406,31 +1411,33 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #4a2414;
+  color: var(--green);
   font-size: 1.05rem;
 }
 
 .calendar-brand svg {
-  color: #cf6500;
+  color: var(--green);
 }
 
 .calendar-app-header nav {
   display: flex;
   justify-content: center;
-  gap: 18px;
+  gap: 6px;
 }
 
 .calendar-app-header nav button {
   border: 0;
+  border-radius: 999px;
   background: transparent;
-  color: #4a2414;
+  color: #3f2a1f;
   font-weight: 700;
-  padding: 18px 0;
+  padding: 8px 12px;
 }
 
 .calendar-app-header nav button.active {
-  color: #c56500;
-  box-shadow: inset 0 -2px 0 #c56500;
+  color: #fffaf4;
+  background: var(--green);
+  box-shadow: none;
 }
 
 .calendar-title-row {
@@ -3158,9 +3165,10 @@ textarea {
   bottom: 0;
   transform: translateX(-50%);
   width: min(100%, 392px);
-  height: 64px;
-  background: #fbf3eb;
-  border-top: 1px solid rgba(118, 72, 44, 0.12);
+  height: 68px;
+  background: rgba(255, 250, 244, 0.94);
+  border-top: 1px solid rgba(23, 63, 53, 0.12);
+  box-shadow: 0 -10px 28px rgba(23, 63, 53, 0.08);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
@@ -3170,7 +3178,7 @@ textarea {
 .bottom-nav button {
   border: 0;
   background: transparent;
-  color: #5c4b40;
+  color: #5a5048;
   display: grid;
   justify-items: center;
   gap: 3px;
@@ -3178,7 +3186,8 @@ textarea {
 }
 
 .bottom-nav button.active {
-  color: var(--brown);
+  color: var(--green);
+  font-weight: 900;
 }
 
 .bottom-nav .avatar {
@@ -3186,7 +3195,7 @@ textarea {
   height: 34px;
   border-radius: 999px;
   place-self: center;
-  background: #6269ca;
+  background: var(--green);
   color: white;
   font-weight: 900;
   font-size: 1rem;

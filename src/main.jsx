@@ -51,22 +51,22 @@ const SAMPLE = {
     { id: "sample-task-2", title: "Update monthly budget notes", status: "Open", dueDate: addDays(1), category: "Finances", priority: "Medium" },
   ],
   links: [
-    { id: "sample-link-1", title: "Airtable", url: "https://airtable.com", category: "Work", notes: "Primary data home" },
-    { id: "sample-link-2", title: "Netlify", url: "https://app.netlify.com", category: "Deployments", notes: "Site hosting" },
+    { id: "sample-link-1", title: "Client Portal", url: "https://example.com", category: "Work", notes: "Frequently used" },
+    { id: "sample-link-2", title: "Resource Folder", url: "https://example.com/resources", category: "Personal", notes: "" },
   ],
   clients: [
-    { id: "sample-client-1", name: "Sample Client", status: "Active", nextSession: today(), notes: "Replace with Airtable data after env setup." },
+    { id: "sample-client-1", name: "Practice Session", status: "Active", nextSession: today(), notes: "" },
   ],
   notes: [
-    { id: "sample-note-1", title: "Migration note", content: "This PWA is ready for Netlify. Set AIRTABLE_PAT and table env vars to connect live data.", category: "Setup", updatedAt: new Date().toISOString() },
+    { id: "sample-note-1", title: "Morning note", content: "Check the day, choose the next right thing, and keep moving.", category: "Brain Dump", updatedAt: new Date().toISOString() },
   ],
   outreach: [
-    { id: "sample-outreach-1", name: "Sample Contact", status: "Pending", category: "Provider", email: "hello@example.com", notes: "Imported from outreach hub shape." },
+    { id: "sample-outreach-1", name: "massage", status: "Pending", category: "Keyword", email: "", notes: "" },
   ],
   finances: {
     expenses: [{ id: "sample-expense-1", name: "Software", month: monthName(), amount: 29, paid: false, category: "Tools" }],
-    income: [{ id: "sample-income-1", source: "Sample Income", month: monthName(), amount: 100 }],
-    debt: [{ id: "sample-debt-1", name: "Sample Debt", remaining: 500, payment: 50 }],
+    income: [{ id: "sample-income-1", source: "Session income", month: monthName(), amount: 100 }],
+    debt: [{ id: "sample-debt-1", name: "Balance", remaining: 500, payment: 50 }],
   },
 };
 
@@ -89,12 +89,12 @@ function App() {
       const result = await api("dashboard.load", {});
       if (result.ok && result.data) {
         setData(mergeData(result.data));
-        setNotice(result.mode === "sample" ? "Using sample data until Airtable env vars are set." : "Live data loaded.");
+        setNotice("");
       } else {
-        setNotice(result.error || "Using sample data until the backend is configured.");
+        setNotice(result.error || "Could not refresh data.");
       }
     } catch (error) {
-      setNotice(error.message || "Could not load live data.");
+      setNotice(error.message || "Could not refresh data.");
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ function App() {
           <div className="brand-mark"><Home size={20} /></div>
           <div>
             <strong>My Life Tracker</strong>
-            <span>Private organizer</span>
+            <span>Daily menu</span>
           </div>
         </div>
         <nav>
@@ -160,10 +160,6 @@ function App() {
             );
           })}
         </nav>
-        <div className="sidebar-note">
-          <Sparkles size={16} />
-          <span>Built for quick capture, calm review, and fewer scattered tabs.</span>
-        </div>
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
@@ -295,7 +291,6 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
           <span className="private-pill">Private</span>
           <p className="mini-label">Organizer app</p>
           <h1>Enter your space.</h1>
-          <p>Unlock your command center.</p>
         </div>
         <form className="unlock-card" onSubmit={submit}>
           <label>
@@ -310,12 +305,10 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
             />
           </label>
           {error ? <p className="form-error">{error}</p> : null}
-          <button className="peach-button" type="submit"><ShieldCheck size={17} /> Unlock Dashboard</button>
-          <strong>Your future self is built by what you do today.</strong>
+          <button className="peach-button" type="submit"><ShieldCheck size={17} /> Enter</button>
         </form>
         <article className="home-card locked-preview">
           <h3>Brain dump a task</h3>
-          <p>Quickly add a task without opening the full dashboard.</p>
           <input value={brainDump} onChange={(event) => setBrainDump(event.target.value)} placeholder="Brain dump a task..." />
           {detailsOpen ? <textarea value={detailNotes} onChange={(event) => setDetailNotes(event.target.value)} placeholder="Add details..." /> : null}
           <button className="outline-button" type="button" onClick={() => setDetailsOpen(!detailsOpen)}>Add details</button>
@@ -326,7 +319,6 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
           <div className="today-head">
             <div>
               <h3>Today I will</h3>
-              <p>Saved by date, ready after unlock.</p>
             </div>
             <span>{doneCount}/{totalCount} done</span>
           </div>
@@ -353,7 +345,7 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
               ))}
             </div>
           ) : (
-            <div className="empty-dashed">Add checklist items here before unlocking.</div>
+            <div className="empty-dashed">No items for this date.</div>
           )}
         </form>
       </section>
@@ -412,7 +404,7 @@ function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
       <div className="command-hero">
         <p className="hero-date">{longDate()}</p>
         <h2>Afternoon, Tiffany.</h2>
-        <p>Your calm command center for today.</p>
+        <p>Tasks, clients, notes, money.</p>
         <button className="refresh-pill" onClick={() => window.location.reload()}><RefreshCw size={17} /> Refresh</button>
         <div className="hero-pills">
           <button onClick={() => setActive("tasks")}>◎ Tasks</button>
@@ -462,7 +454,7 @@ function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
       </div>
 
       <div className="bottom-nav">
-        <button className="active"><Home size={18} />Unlocked</button>
+        <button className="active"><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button onClick={() => setActive("links")}>•••<span>More</span></button>
@@ -692,13 +684,13 @@ function TasksPage({ tasks = [], setActive, mutate, refresh, loading }) {
                 onStar={() => starTask(task)}
               />
             ))}
-            {!displayTasks.length ? <div className="empty-dashed">No tasks found for this view.</div> : null}
+            {!displayTasks.length ? <div className="empty-dashed">Nothing in this view.</div> : null}
           </div>
         </article>
       </div>
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button className="active"><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button onClick={() => setActive("links")}>•••<span>More</span></button>
@@ -795,11 +787,11 @@ function LinksPage({ links = [], setActive, mutate, refresh, loading }) {
           <strong>LifeTracker</strong>
         </div>
         <nav>
-          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+          {["Home", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
             <button
               key={item}
               className={item === "Links" ? "active" : ""}
-              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+              onClick={() => setActive(item === "Home" ? "dashboard" : item.toLowerCase())}
             >
               {item}
             </button>
@@ -812,7 +804,7 @@ function LinksPage({ links = [], setActive, mutate, refresh, loading }) {
         <section className="links-hero">
           <p>My Life Tracker</p>
           <h1>Links Library</h1>
-          <span>A clean home for your Google Docs, business resources, relationship links, referrals, assessments, attachments, and anything you want quick access to.</span>
+          <span>Docs, resources, referrals, assessments, attachments, and everyday shortcuts.</span>
           <div className="links-stats">
             <StatTile label="Total links" value={links.length} />
             <StatTile label="Categories" value={Math.max(categories.length - 1, 0)} />
@@ -851,13 +843,13 @@ function LinksPage({ links = [], setActive, mutate, refresh, loading }) {
             {filteredLinks.map((link) => (
               <LinkLibraryCard key={link.id} link={link} />
             ))}
-            {!filteredLinks.length ? <div className="empty-dashed">No links found.</div> : null}
+            {!filteredLinks.length ? <div className="empty-dashed">Nothing in this view.</div> : null}
           </div>
         </section>
       </div>
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button className="active">•••<span>More</span></button>
@@ -925,11 +917,11 @@ function ClientsPage({ clients = [], setActive, mutate }) {
           <strong>LifeTracker</strong>
         </div>
         <nav>
-          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+          {["Home", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
             <button
               key={item}
               className={item === "Clients" ? "active" : ""}
-              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+              onClick={() => setActive(item === "Home" ? "dashboard" : item.toLowerCase())}
             >
               {item}
             </button>
@@ -1000,7 +992,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
       {modalOpen ? <AddSessionModal clients={clients} mutate={mutate} onClose={() => setModalOpen(false)} /> : null}
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button className="active"><UsersRound size={18} />Clients</button>
         <button onClick={() => setActive("links")}>•••<span>More</span></button>
@@ -1163,11 +1155,11 @@ function NotesPage({ notes = [], setActive, mutate, refresh, loading }) {
           <strong>LifeTracker</strong>
         </div>
         <nav>
-          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+          {["Home", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
             <button
               key={item}
               className={item === "Notes" ? "active" : ""}
-              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+              onClick={() => setActive(item === "Home" ? "dashboard" : item.toLowerCase())}
             >
               {item}
             </button>
@@ -1201,13 +1193,13 @@ function NotesPage({ notes = [], setActive, mutate, refresh, loading }) {
 
         <section className="notes-list">
           {filteredNotes.map((note) => <NoteCard key={note.id} note={note} />)}
-          {!filteredNotes.length ? <div className="empty-dashed">No notes found.</div> : null}
+          {!filteredNotes.length ? <div className="empty-dashed">Nothing in this view.</div> : null}
           <div className="notes-count"><FileText size={15} /> {notes.length} notes saved</div>
         </section>
       </div>
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button className="active">•••<span>More</span></button>
@@ -1228,7 +1220,7 @@ function NoteCard({ note }) {
           {note.category ? <span className="note-category">{note.category}</span> : null}
           {locked ? <span className="locked-pill"><LockKeyhole size={13} /> Locked</span> : null}
         </div>
-        <p>{locked ? "This note is locked. Enter the passcode to view or edit it." : note.content || "No note body yet."}</p>
+        <p>{locked ? "Locked note." : note.content || ""}</p>
         <small>{noteDate(note)} · {wordCount(note.content)} words</small>
       </div>
     </article>
@@ -1296,7 +1288,7 @@ function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
           <article className="record-card" key={record.id}>
             <div>
               <h3>{record.title || record.name || record.source || "Untitled"}</h3>
-              <p>{record.notes || record.content || record.category || record.status || "No extra details yet."}</p>
+              <p>{record.notes || record.content || record.category || record.status || ""}</p>
             </div>
             <div className="meta-row">
               {record.status ? <span>{record.status}</span> : null}
@@ -1312,7 +1304,7 @@ function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
             </div>
           </article>
         ))}
-        {!records.length ? <EmptyState label={`No ${title.toLowerCase()} found.`} /> : null}
+        {!records.length ? <EmptyState label="Nothing in this view." /> : null}
       </div>
     </section>
   );
@@ -1339,11 +1331,11 @@ function CalendarPage({ tasks, mutate, setActive }) {
           <strong>LifeTracker</strong>
         </div>
         <nav>
-          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+          {["Home", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
             <button
               key={item}
               className={item === "Calendar" ? "active" : ""}
-              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+              onClick={() => setActive(item === "Home" ? "dashboard" : item.toLowerCase())}
             >
               {item}
             </button>
@@ -1418,7 +1410,7 @@ function CalendarPage({ tasks, mutate, setActive }) {
       </div>
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button className="active">•••<span>More</span></button>
@@ -1469,11 +1461,11 @@ function FinancesPage({ data, mutate, setActive }) {
           <strong>LifeTracker</strong>
         </div>
         <nav>
-          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+          {["Home", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
             <button
               key={item}
               className={item === "Finances" ? "active" : ""}
-              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+              onClick={() => setActive(item === "Home" ? "dashboard" : item.toLowerCase())}
             >
               {item}
             </button>
@@ -1543,12 +1535,12 @@ function FinancesPage({ data, mutate, setActive }) {
               onDelete={() => deleteExpense(record)}
             />
           ))}
-          {!filtered.length ? <div className="empty-dashed">No finance records found.</div> : null}
+          {!filtered.length ? <div className="empty-dashed">Nothing in this view.</div> : null}
         </section>
       </div>
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button className="active">•••<span>More</span></button>
@@ -1643,11 +1635,11 @@ function OutreachPage({ records = [], setActive, mutate, refresh, loading }) {
           <strong>LifeTracker</strong>
         </div>
         <nav>
-          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+          {["Home", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
             <button
               key={item}
               className={item === "Outreach" ? "active" : ""}
-              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+              onClick={() => setActive(item === "Home" ? "dashboard" : item.toLowerCase())}
             >
               {item}
             </button>
@@ -1702,12 +1694,12 @@ function OutreachPage({ records = [], setActive, mutate, refresh, loading }) {
               onContacted={() => setLeadStatus(record, "Contacted")}
             />
           ))}
-          {!filtered.length ? <div className="empty-dashed">No outreach leads found.</div> : null}
+          {!filtered.length ? <div className="empty-dashed">Nothing in this view.</div> : null}
         </div>
       </main>
 
       <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
         <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
         <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
         <button className="active">•••<span>More</span></button>
@@ -1791,7 +1783,7 @@ async function api(action, payload) {
 async function connectGoogle(setConnected, setEvents) {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId || !window.google?.accounts?.oauth2) {
-    setEvents([{ id: "google-help", summary: "Add VITE_GOOGLE_CLIENT_ID and load the Google Identity script to enable live Google Calendar.", start: "Setup needed" }]);
+    setEvents([{ id: "google-help", summary: "Google Calendar is not connected.", start: "Calendar" }]);
     return;
   }
   const tokenClient = window.google.accounts.oauth2.initTokenClient({
