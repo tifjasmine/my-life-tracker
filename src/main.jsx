@@ -15,6 +15,7 @@ import {
   Home,
   LayoutDashboard,
   Link as LinkIcon,
+  LockKeyhole,
   Loader2,
   Menu,
   MessageSquarePlus,
@@ -22,6 +23,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  ShieldCheck,
   Sparkles,
   Trash2,
   UsersRound,
@@ -67,6 +69,7 @@ const SAMPLE = {
 
 function App() {
   const [active, setActive] = useState("dashboard");
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("lifeTrackerUnlocked") === "true");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState(SAMPLE);
   const [loading, setLoading] = useState(false);
@@ -95,15 +98,29 @@ function App() {
   }
 
   useEffect(() => {
-    loadData();
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (unlocked) loadData();
+  }, [unlocked]);
 
   async function mutate(action, payload) {
     const result = await api(action, payload);
     if (!result.ok) throw new Error(result.error || "Request failed.");
     await loadData();
     return result;
+  }
+
+  if (!unlocked) {
+    return (
+      <LockScreen
+        onUnlock={() => {
+          sessionStorage.setItem("lifeTrackerUnlocked", "true");
+          setUnlocked(true);
+        }}
+      />
+    );
   }
 
   return (
@@ -143,30 +160,32 @@ function App() {
         </div>
       </aside>
 
-      <main>
-        <header className="topbar">
-          <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
-            <Menu size={20} />
-          </button>
-          <div>
-            <p>{activeSection.label}</p>
-            <h1>{active === "dashboard" ? "Today at a glance" : sectionTitle(active)}</h1>
-          </div>
-          <div className="topbar-actions">
-            <label className="search">
-              <Search size={17} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search everything" />
-            </label>
-            <button className="button ghost" onClick={loadData} disabled={loading}>
-              {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
-              Refresh
+      <main className={active === "dashboard" ? "home-main" : ""}>
+        {active !== "dashboard" ? (
+          <header className="topbar">
+            <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
+              <Menu size={20} />
             </button>
-          </div>
-        </header>
+            <div>
+              <p>{activeSection.label}</p>
+              <h1>{sectionTitle(active)}</h1>
+            </div>
+            <div className="topbar-actions">
+              <label className="search">
+                <Search size={17} />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search everything" />
+              </label>
+              <button className="button ghost" onClick={loadData} disabled={loading}>
+                {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+                Refresh
+              </button>
+            </div>
+          </header>
+        ) : null}
 
-        {notice ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" ? <div className="notice">{notice}</div> : null}
 
-        {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} query={query} />}
+        {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <RecordsPage title="Tasks" kind="tasks" records={filterRecords(data.tasks, query, ["title", "category", "priority"])} fields={taskFields} mutate={mutate} />}
         {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} />}
         {active === "links" && <RecordsPage title="Links" kind="links" records={filterRecords(data.links, query, ["title", "url", "category", "notes"])} fields={linkFields} mutate={mutate} linkField="url" />}
@@ -179,45 +198,191 @@ function App() {
   );
 }
 
-function Dashboard({ data, stats, setActive }) {
+function LockScreen({ onUnlock }) {
+  const [passcode, setPasscode] = useState("");
+  const [error, setError] = useState("");
+
+  function submit(event) {
+    event.preventDefault();
+    if (passcode === "2468") {
+      setError("");
+      onUnlock();
+      return;
+    }
+    setError("That passcode did not match.");
+    setPasscode("");
+  }
+
+  return (
+    <main className="phone-stage">
+      <section className="phone-shell">
+        <div className="lock-hero">
+          <div className="lock-icon"><LockKeyhole size={24} /></div>
+          <span className="private-pill">Private</span>
+          <p className="mini-label">Organizer app</p>
+          <h1>Enter your space.</h1>
+          <p>Unlock your command center.</p>
+        </div>
+        <form className="unlock-card" onSubmit={submit}>
+          <label>
+            <span>Passcode</span>
+            <input
+              value={passcode}
+              onChange={(event) => setPasscode(event.target.value.replace(/\D/g, "").slice(0, 4))}
+              inputMode="numeric"
+              type="password"
+              placeholder="Enter passcode"
+              autoFocus
+            />
+          </label>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button className="peach-button" type="submit"><ShieldCheck size={17} /> Unlock Dashboard</button>
+          <strong>Your future self is built by what you do today.</strong>
+        </form>
+        <article className="home-card locked-preview">
+          <h3>Brain dump a task</h3>
+          <p>Quickly add a task without opening the full dashboard.</p>
+          <input disabled placeholder="Brain dump a task..." />
+          <button className="outline-button" disabled>Add details</button>
+          <button className="brown-button" disabled><Plus size={17} /> Random Now</button>
+          <button className="orange-button" disabled><Sparkles size={17} /> Today's 5</button>
+        </article>
+        <article className="home-card locked-preview">
+          <div className="today-head">
+            <div>
+              <h3>Today I will</h3>
+              <p>Saved by date, ready after unlock.</p>
+            </div>
+            <span>0/0 done</span>
+          </div>
+          <label>
+            <span>Checklist date</span>
+            <input disabled value={todaySlash()} readOnly />
+          </label>
+          <button className="outline-button" disabled>Today</button>
+          <input disabled placeholder="Add one thing for today..." />
+          <button className="outline-button" disabled><Plus size={16} /> Add</button>
+          <div className="empty-dashed">Unlock to add checklist items.</div>
+        </article>
+      </section>
+    </main>
+  );
+}
+
+function Dashboard({ data, stats, setActive, mutate }) {
   const upcoming = [...data.tasks]
     .filter((task) => String(task.status || "").toLowerCase() !== "done")
     .sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")))
     .slice(0, 5);
   const recentNotes = [...data.notes].slice(0, 3);
 
+  return <HomeDashboard data={data} stats={stats} upcoming={upcoming} setActive={setActive} mutate={mutate} />;
+}
+
+function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
+  const [brainDump, setBrainDump] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailNotes, setDetailNotes] = useState("");
+  const [checkDate, setCheckDate] = useState(todaySlash());
+  const [todayText, setTodayText] = useState("");
+  const [itemsByDate, setItemsByDate] = useState(() => JSON.parse(localStorage.getItem("lifeTrackerTodayItems") || "{}"));
+  const todaysItems = itemsByDate[checkDate] || [];
+  const doneCount = todaysItems.filter((item) => item.done).length;
+
+  useEffect(() => {
+    localStorage.setItem("lifeTrackerTodayItems", JSON.stringify(itemsByDate));
+  }, [itemsByDate]);
+
+  async function addBrainDump(category) {
+    if (!brainDump.trim()) return;
+    await mutate("tasks.create", {
+      title: brainDump.trim(),
+      category,
+      status: "Open",
+      notes: detailNotes,
+    });
+    setBrainDump("");
+    setDetailNotes("");
+    setDetailsOpen(false);
+  }
+
+  function addTodayItem() {
+    if (!todayText.trim()) return;
+    setItemsByDate({
+      ...itemsByDate,
+      [checkDate]: [...todaysItems, { id: crypto.randomUUID(), text: todayText.trim(), done: false }],
+    });
+    setTodayText("");
+  }
+
+  function toggleTodayItem(id) {
+    setItemsByDate({
+      ...itemsByDate,
+      [checkDate]: todaysItems.map((item) => (item.id === id ? { ...item, done: !item.done } : item)),
+    });
+  }
+
   return (
-    <section className="dashboard-grid">
-      <div className="welcome-panel">
-        <p className="eyebrow">Life command center</p>
-        <h2>One place for the little things that hold the big things together.</h2>
-        <div className="quick-actions">
-          <button onClick={() => setActive("tasks")}><Plus size={17} /> Add a task</button>
-          <button onClick={() => setActive("calendar")}><CalendarDays size={17} /> See calendar</button>
-          <button onClick={() => setActive("finances")}><BarChart3 size={17} /> Money view</button>
-        </div>
+    <section className="home-phone">
+      <div className="home-hero">
+        <div className="lock-icon"><LockKeyhole size={22} /></div>
+        <span className="private-pill">Private</span>
+        <p className="mini-label">Organizer app</p>
+        <h2>Enter your space.</h2>
+        <p>Unlock your command center.</p>
       </div>
-      <div className="stat-strip">
+
+      <article className="home-card brain-card">
+        <h3>Brain dump a task</h3>
+        <p>Quickly add a task without opening the full dashboard.</p>
+        <input value={brainDump} onChange={(event) => setBrainDump(event.target.value)} placeholder="Brain dump a task..." />
+        {detailsOpen ? (
+          <textarea value={detailNotes} onChange={(event) => setDetailNotes(event.target.value)} placeholder="Add details..." />
+        ) : null}
+        <button className="outline-button" onClick={() => setDetailsOpen(!detailsOpen)}>Add details</button>
+        <button className="brown-button" onClick={() => addBrainDump("Random Now")}><Plus size={17} /> Random Now</button>
+        <button className="orange-button" onClick={() => addBrainDump("Today's 5")}><Sparkles size={17} /> Today's 5</button>
+      </article>
+
+      <article className="home-card today-card">
+        <div className="today-head">
+          <div>
+            <h3>Today I will</h3>
+            <p>Saved on this device by date for quick daily focus.</p>
+          </div>
+          <span>{doneCount}/{todaysItems.length} done</span>
+        </div>
+        <label>
+          <span>Checklist date</span>
+          <input value={checkDate} onChange={(event) => setCheckDate(event.target.value)} />
+        </label>
+        <button className="outline-button" onClick={() => setCheckDate(todaySlash())}>Today</button>
+        <input value={todayText} onChange={(event) => setTodayText(event.target.value)} placeholder="Add one thing for today..." />
+        <button className="outline-button" onClick={addTodayItem}><Plus size={16} /> Add</button>
+        <div className="today-list">
+          {todaysItems.length ? todaysItems.map((item) => (
+            <label className="today-item" key={item.id}>
+              <input type="checkbox" checked={item.done} onChange={() => toggleTodayItem(item.id)} />
+              <span>{item.text}</span>
+            </label>
+          )) : <div className="empty-dashed">No checklist items for this date yet.</div>}
+        </div>
+      </article>
+
+      <div className="home-nav-grid">
+        {SECTIONS.filter((section) => section.id !== "dashboard").map((section) => {
+          const Icon = section.icon;
+          return <button key={section.id} onClick={() => setActive(section.id)}><Icon size={17} /> {section.label}</button>;
+        })}
+      </div>
+
+      <div className="mini-stats">
         <Stat label="Open tasks" value={stats.openTasks} />
         <Stat label="Clients" value={stats.clients} />
         <Stat label="Links" value={stats.links} />
-        <Stat label="Unpaid" value={money(stats.unpaid)} />
       </div>
       <Panel title="Upcoming tasks" action="Tasks" onAction={() => setActive("tasks")}>
-        <List records={upcoming} primary="title" secondary={(item) => [item.category, item.dueDate].filter(Boolean).join(" • ")} empty="No open tasks." />
-      </Panel>
-      <Panel title="Recent notes" action="Notes" onAction={() => setActive("notes")}>
-        <List records={recentNotes} primary="title" secondary="content" empty="No notes yet." />
-      </Panel>
-      <Panel title="Financial pulse" action="Finances" onAction={() => setActive("finances")}>
-        <div className="money-grid">
-          <Stat label="Expenses" value={money(stats.expenses)} />
-          <Stat label="Income" value={money(stats.income)} />
-          <Stat label="Debt" value={money(stats.debt)} />
-        </div>
-      </Panel>
-      <Panel title="Outreach focus" action="Outreach" onAction={() => setActive("outreach")}>
-        <List records={data.outreach.slice(0, 4)} primary="name" secondary={(item) => [item.status, item.category].filter(Boolean).join(" • ")} empty="No outreach records." />
+        <List records={upcoming} primary="title" secondary={(item) => [item.category, item.dueDate].filter(Boolean).join(" - ")} empty="No open tasks." />
       </Panel>
     </section>
   );
@@ -469,6 +634,11 @@ function sum(records = [], key) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function todaySlash() {
+  const date = new Date();
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 function addDays(days) {
