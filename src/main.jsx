@@ -164,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" && active !== "tasks" && active !== "calendar" ? (
+        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -186,12 +186,12 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} setActive={setActive} />}
-        {active === "links" && <RecordsPage title="Links" kind="links" records={filterRecords(data.links, query, ["title", "url", "category", "notes"])} fields={linkFields} mutate={mutate} linkField="url" />}
+        {active === "links" && <LinksPage links={data.links} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "clients" && <RecordsPage title="Clients" kind="clients" records={filterRecords(data.clients, query, ["name", "status", "notes"])} fields={clientFields} mutate={mutate} />}
         {active === "notes" && <RecordsPage title="Notes" kind="notes" records={filterRecords(data.notes, query, ["title", "content", "category"])} fields={noteFields} mutate={mutate} />}
         {active === "finances" && <FinancesPage data={data.finances} mutate={mutate} />}
@@ -652,6 +652,163 @@ function TaskCard({ task, busy, onToggle, onEdit, onDelete, onStar }) {
   );
 }
 
+function LinksPage({ links = [], setActive, mutate, refresh, loading }) {
+  const [linkSearch, setLinkSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [busyCreate, setBusyCreate] = useState(false);
+
+  const categories = useMemo(() => {
+    const counts = links.reduce((all, link) => {
+      const category = link.category || "Personal";
+      all[category] = (all[category] || 0) + 1;
+      return all;
+    }, {});
+    return [
+      { label: "All", count: links.length },
+      ...Object.entries(counts).map(([label, count]) => ({ label, count })),
+    ];
+  }, [links]);
+
+  const filteredLinks = useMemo(() => {
+    const term = linkSearch.trim().toLowerCase();
+    return links.filter((link) => {
+      const matchesCategory = selectedCategory === "All" || (link.category || "Personal") === selectedCategory;
+      const matchesTerm = !term || [link.title, link.url, link.category, link.notes].some((value) => String(value || "").toLowerCase().includes(term));
+      return matchesCategory && matchesTerm;
+    });
+  }, [links, linkSearch, selectedCategory]);
+
+  const files = links.filter((link) => hasAttachment(link)).length;
+
+  async function addLink() {
+    const title = window.prompt("Link title");
+    if (!title?.trim()) return;
+    const url = window.prompt("URL");
+    if (!url?.trim()) return;
+    const category = window.prompt("Category", "Personal") || "Personal";
+    setBusyCreate(true);
+    try {
+      await mutate("links.create", {
+        title: title.trim(),
+        url: url.trim(),
+        category: category.trim(),
+      });
+    } finally {
+      setBusyCreate(false);
+    }
+  }
+
+  return (
+    <section className="links-page">
+      <header className="calendar-app-header links-nav">
+        <div className="calendar-brand">
+          <Home size={20} />
+          <strong>LifeTracker</strong>
+        </div>
+        <nav>
+          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+            <button
+              key={item}
+              className={item === "Links" ? "active" : ""}
+              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+        <button className="tasks-avatar" aria-label="Profile">T</button>
+      </header>
+
+      <div className="links-content">
+        <section className="links-hero">
+          <p>My Life Tracker</p>
+          <h1>Links Library</h1>
+          <span>A clean home for your Google Docs, business resources, relationship links, referrals, assessments, attachments, and anything you want quick access to.</span>
+          <div className="links-stats">
+            <StatTile label="Total links" value={links.length} />
+            <StatTile label="Categories" value={Math.max(categories.length - 1, 0)} />
+            <StatTile label="Files" value={files} />
+          </div>
+        </section>
+
+        <section className="links-controls">
+          <label className="links-search">
+            <Search size={18} />
+            <input value={linkSearch} onChange={(event) => setLinkSearch(event.target.value)} placeholder="Search links, categories, files..." />
+          </label>
+          <button className="links-icon-button" onClick={refresh} disabled={loading} aria-label="Refresh links">
+            {loading ? <Loader2 className="spin" size={18} /> : <RefreshCw size={18} />}
+            <span>Refresh</span>
+          </button>
+          <button className="links-add-button" onClick={addLink} disabled={busyCreate}>
+            {busyCreate ? <Loader2 className="spin" size={18} /> : <Plus size={18} />}
+            <span>Add Link</span>
+          </button>
+          <div className="links-chip-row">
+            {categories.map((category) => (
+              <button key={category.label} className={selectedCategory === category.label ? "active" : ""} onClick={() => setSelectedCategory(category.label)}>
+                {linkCategoryIcon(category.label)} {category.label} <span>{category.count}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="links-results">
+          <div className="links-results-head">
+            <h2>{selectedCategory === "All" ? "All Links" : selectedCategory}</h2>
+            <p>{filteredLinks.length} results</p>
+          </div>
+          <div className="links-grid">
+            {filteredLinks.map((link) => (
+              <LinkLibraryCard key={link.id} link={link} />
+            ))}
+            {!filteredLinks.length ? <div className="empty-dashed">No links found.</div> : null}
+          </div>
+        </section>
+      </div>
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button className="active">•••<span>More</span></button>
+        <button className="avatar">T</button>
+      </div>
+    </section>
+  );
+}
+
+function StatTile({ label, value }) {
+  return (
+    <div className="links-stat-tile">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function LinkLibraryCard({ link }) {
+  const host = linkHost(link.url);
+  const category = link.category || "Personal";
+  return (
+    <article className="link-library-card">
+      <div className={`link-library-icon ${linkTone(category)}`}>
+        {linkCategorySvg(category)}
+      </div>
+      <div className="link-library-body">
+        <h3>{link.title || "Untitled Link"}</h3>
+        <p>{host}</p>
+        {link.notes ? <em>{link.notes}</em> : null}
+        {hasAttachment(link) ? <span className="attachment-pill">📎 {attachmentLabel(link)}</span> : null}
+        <span className={`category-pill ${linkTone(category)}`}>{category}</span>
+      </div>
+      <a href={normalizeUrl(link.url)} target="_blank" rel="noreferrer">
+        Open Link <ExternalLink size={15} />
+      </a>
+    </article>
+  );
+}
+
 function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
   const blank = Object.fromEntries(fields.map((field) => [field.name, field.default || ""]));
   const [editing, setEditing] = useState(null);
@@ -1046,6 +1203,53 @@ function money(value) {
 function normalizeUrl(url) {
   if (!url) return "#";
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+function linkHost(url) {
+  if (!url) return "saved link";
+  try {
+    return new URL(normalizeUrl(url)).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function hasAttachment(link) {
+  return Boolean(link.attachment || link.attachments || link.file || link.filename);
+}
+
+function attachmentLabel(link) {
+  if (link.filename) return link.filename;
+  if (Array.isArray(link.attachments) && link.attachments[0]?.filename) return link.attachments[0].filename;
+  if (typeof link.attachment === "string") return link.attachment.split("/").pop() || "Attachment";
+  return "Attachment";
+}
+
+function linkTone(category) {
+  const text = String(category || "").toLowerCase();
+  if (text.includes("relationship") || text.includes("book")) return "yellow";
+  if (text.includes("embodied") || text.includes("self")) return "aqua";
+  if (text.includes("personal")) return "green";
+  if (text.includes("daily") || text.includes("business")) return "orange";
+  return "cream";
+}
+
+function linkCategoryIcon(category) {
+  const text = String(category || "").toLowerCase();
+  if (category === "All") return "▱";
+  if (text.includes("kids")) return "◉";
+  if (text.includes("personal")) return "♙";
+  if (text.includes("relationship")) return "▭";
+  if (text.includes("daily")) return "▣";
+  if (text.includes("embodied")) return "✣";
+  return "◌";
+}
+
+function linkCategorySvg(category) {
+  const text = String(category || "").toLowerCase();
+  if (text.includes("relationship") || text.includes("book")) return <BookOpenText size={20} />;
+  if (text.includes("embodied") || text.includes("self")) return <Sparkles size={20} />;
+  return <ContactRound size={20} />;
 }
 
 function sectionTitle(id) {
