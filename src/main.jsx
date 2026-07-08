@@ -164,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" && active !== "tasks" ? (
+        {active !== "dashboard" && active !== "tasks" && active !== "calendar" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -186,11 +186,11 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" && active !== "tasks" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
-        {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} />}
+        {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} setActive={setActive} />}
         {active === "links" && <RecordsPage title="Links" kind="links" records={filterRecords(data.links, query, ["title", "url", "category", "notes"])} fields={linkFields} mutate={mutate} linkField="url" />}
         {active === "clients" && <RecordsPage title="Clients" kind="clients" records={filterRecords(data.clients, query, ["name", "status", "notes"])} fields={clientFields} mutate={mutate} />}
         {active === "notes" && <RecordsPage title="Notes" kind="notes" records={filterRecords(data.notes, query, ["title", "content", "category"])} fields={noteFields} mutate={mutate} />}
@@ -731,33 +731,111 @@ function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
   );
 }
 
-function CalendarPage({ tasks, mutate }) {
+function CalendarPage({ tasks, mutate, setActive }) {
   const [events, setEvents] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [calendarSearch, setCalendarSearch] = useState("");
+  const [view, setView] = useState("Week");
+  const [selectedDate, setSelectedDate] = useState(todaySlash());
   const datedTasks = tasks.filter((task) => task.dueDate);
+  const matchingEvents = events.filter((event) => String(event.summary || "").toLowerCase().includes(calendarSearch.trim().toLowerCase()));
 
   async function addTaskEvent(task) {
     await mutate("tasks.update", { ...task, addToCalendar: true });
   }
 
   return (
-    <section className="section-stack">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Calendar</p>
-          <h2>Schedule and due dates</h2>
+    <section className="calendar-page">
+      <header className="calendar-app-header">
+        <div className="calendar-brand">
+          <Home size={20} />
+          <strong>LifeTracker</strong>
         </div>
-        <button className="button" onClick={() => connectGoogle(setConnected, setEvents)}>
-          <CalendarDays size={17} /> {connected ? "Reconnect Google" : "Connect Google"}
-        </button>
+        <nav>
+          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+            <button
+              key={item}
+              className={item === "Calendar" ? "active" : ""}
+              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+        <button className="tasks-avatar" aria-label="Profile">T</button>
+      </header>
+
+      <div className="calendar-title-row">
+        <div>
+          <p>Calendar</p>
+          <h1>{longDateWithYear()}</h1>
+        </div>
+        <div className="calendar-actions">
+          <button><Plus size={16} /> Add</button>
+          <button aria-label="More calendar actions">•••</button>
+        </div>
       </div>
-      <div className="calendar-layout">
-        <Panel title="Task dates">
-          <List records={datedTasks} primary="title" secondary={(item) => [item.dueDate, item.priority].filter(Boolean).join(" • ")} empty="No dated tasks." action={(task) => <button onClick={() => addTaskEvent(task)}>Add flag</button>} />
-        </Panel>
-        <Panel title="Google events">
-          <List records={events} primary="summary" secondary={(item) => item.start || item.calendar || ""} empty="Connect Google Calendar to show live events." />
-        </Panel>
+
+      <div className="calendar-toolbar">
+        <label className="calendar-search">
+          <Search size={18} />
+          <input value={calendarSearch} onChange={(event) => setCalendarSearch(event.target.value)} placeholder="Search appointments..." />
+        </label>
+        <button className="calendar-select">All accessible calendars <ChevronDown size={15} /></button>
+        <div className="calendar-view-tabs">
+          {["Day", "Week", "Month", "List"].map((item) => (
+            <button key={item} className={view === item ? "active" : ""} onClick={() => setView(item)}>{item}</button>
+          ))}
+        </div>
+        <div className="calendar-date-controls">
+          <button aria-label="Previous date">‹</button>
+          <label>
+            <input value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} />
+            <CalendarDays size={16} />
+          </label>
+          <button aria-label="Next date">›</button>
+          <button onClick={() => setSelectedDate(todaySlash())}>Today</button>
+        </div>
+      </div>
+
+      <div className="calendar-stage">
+        {connected && matchingEvents.length ? (
+          <div className="calendar-event-list">
+            {matchingEvents.map((event) => (
+              <article key={event.id}>
+                <strong>{event.summary}</strong>
+                <span>{event.start || event.calendar}</span>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <article className="calendar-connect-card">
+            <CalendarDays size={44} />
+            <h2>Connect Google Calendar</h2>
+            <p>Sign in with the Google account that has access to your calendars.</p>
+            <button onClick={() => connectGoogle(setConnected, setEvents)}>
+              <ArrowUpRight size={16} /> {connected ? "Reconnect Google" : "Connect Google"}
+            </button>
+          </article>
+        )}
+        {datedTasks.length ? (
+          <div className="calendar-task-strip">
+            {datedTasks.slice(0, 4).map((task) => (
+              <button key={task.id} onClick={() => addTaskEvent(task)}>
+                <Clock3 size={15} />
+                <span>{task.title}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button className="active">•••<span>More</span></button>
+        <button className="avatar">T</button>
       </div>
     </section>
   );
