@@ -3,7 +3,7 @@ const FINANCE_BASE_ID =
   process.env.FINANCE_AIRTABLE_BASE_ID ||
   process.env.AIRTABLE_FINANCE_BASE_ID ||
   process.env.FINANCES_AIRTABLE_BASE_ID ||
-  LIFE_BASE_ID;
+  "appVlWgUhBB73PDa4";
 const AIRTABLE_PAT = process.env.AIRTABLE_PAT;
 
 const TABLES = {
@@ -11,7 +11,7 @@ const TABLES = {
   notes: process.env.AIRTABLE_NOTES_TABLE || "Notes",
   links: process.env.AIRTABLE_LINKS_TABLE || process.env.LINKS_TABLE_ID || "tblyaYNEozqaeFWnp",
   clients: process.env.AIRTABLE_CLIENTS_TABLE || "Weekly Sessions",
-  expenses: process.env.AIRTABLE_EXPENSES_TABLE || "Expenses By Month",
+  expenses: process.env.AIRTABLE_EXPENSES_TABLE || process.env.FINANCE_AIRTABLE_TABLE_ID || "tblTe5SntepDSbEpS",
   income: process.env.AIRTABLE_INCOME_TABLE || "Income",
   debt: process.env.AIRTABLE_DEBT_TABLE || "Total Debt",
 };
