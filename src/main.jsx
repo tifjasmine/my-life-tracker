@@ -6,6 +6,7 @@ import {
   BookOpenText,
   CalendarDays,
   Check,
+  ChevronDown,
   CircleDollarSign,
   Clock3,
   ContactRound,
@@ -25,9 +26,11 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Star,
   Trash2,
   UsersRound,
   X,
+  Zap,
 } from "lucide-react";
 import "./styles.css";
 
@@ -161,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" ? (
+        {active !== "dashboard" && active !== "tasks" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -183,10 +186,10 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
-        {active === "tasks" && <RecordsPage title="Tasks" kind="tasks" records={filterRecords(data.tasks, query, ["title", "category", "priority"])} fields={taskFields} mutate={mutate} />}
+        {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} />}
         {active === "links" && <RecordsPage title="Links" kind="links" records={filterRecords(data.links, query, ["title", "url", "category", "notes"])} fields={linkFields} mutate={mutate} linkField="url" />}
         {active === "clients" && <RecordsPage title="Clients" kind="clients" records={filterRecords(data.clients, query, ["name", "status", "notes"])} fields={clientFields} mutate={mutate} />}
@@ -410,6 +413,245 @@ function TargetIcon(props) {
   return <Check {...props} />;
 }
 
+function TasksPage({ tasks = [], setActive, mutate, refresh, loading }) {
+  const [brainDump, setBrainDump] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailNotes, setDetailNotes] = useState("");
+  const [taskSearch, setTaskSearch] = useState("");
+  const [includeCompleted, setIncludeCompleted] = useState(false);
+  const [busyId, setBusyId] = useState("");
+  const [busyCreate, setBusyCreate] = useState(false);
+
+  const categories = [
+    "Dashboard",
+    "Today's 5",
+    "Random Now",
+    "Random Later",
+    "Habits",
+    "Kids",
+    "The Daily Session",
+    "The Regulated Mother",
+    "The Embodied Self",
+    "Admin",
+    "Household",
+    "Husband and Family",
+    "Me Time",
+    "Supplies",
+  ];
+
+  const filtered = useMemo(() => {
+    const term = taskSearch.trim().toLowerCase();
+    return tasks.filter((task) => {
+      const done = isTaskDone(task);
+      const matchesTerm = !term || [task.title, task.category, task.status, task.priority, task.notes].some((value) => String(value || "").toLowerCase().includes(term));
+      return matchesTerm && (includeCompleted || !done);
+    });
+  }, [tasks, taskSearch, includeCompleted]);
+
+  const completed = tasks.filter(isTaskDone);
+  const activeTasks = tasks.filter((task) => !isTaskDone(task));
+  const dueToday = activeTasks.filter((task) => task.dueDate === today());
+  const todaysFive = filtered.filter((task) => task.category === "Today's 5");
+  const displayTasks = todaysFive.length ? todaysFive : filtered;
+  const openTodayFive = displayTasks.filter((task) => !isTaskDone(task)).length;
+  const completeTodayFive = displayTasks.filter(isTaskDone).length;
+
+  async function addBrainDump(event) {
+    event.preventDefault();
+    if (!brainDump.trim()) return;
+    setBusyCreate(true);
+    try {
+      await mutate("tasks.create", {
+        title: brainDump.trim(),
+        category: "Random Now",
+        status: "Open",
+        notes: detailNotes,
+      });
+      setBrainDump("");
+      setDetailNotes("");
+      setDetailsOpen(false);
+    } finally {
+      setBusyCreate(false);
+    }
+  }
+
+  async function toggleTask(task) {
+    setBusyId(task.id);
+    try {
+      await mutate("tasks.update", {
+        ...task,
+        status: isTaskDone(task) ? "Open" : "Completed",
+      });
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function editTask(task) {
+    const title = window.prompt("Edit task", task.title || "");
+    if (!title || title.trim() === task.title) return;
+    setBusyId(task.id);
+    try {
+      await mutate("tasks.update", { ...task, title: title.trim() });
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function deleteTask(task) {
+    if (!window.confirm("Delete this task?")) return;
+    setBusyId(task.id);
+    try {
+      await mutate("tasks.delete", task);
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function starTask(task) {
+    setBusyId(task.id);
+    try {
+      await mutate("tasks.update", {
+        ...task,
+        priority: task.priority === "Starred" ? "" : "Starred",
+      });
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  return (
+    <section className="tasks-page">
+      <header className="tasks-header">
+        <div className="tasks-brand-row">
+          <div>
+            <h1>My Life Tracker</h1>
+            <p>{longDateWithYear()}</p>
+          </div>
+          <button className="tasks-avatar" aria-label="Profile">T</button>
+        </div>
+        <div className="task-chip-row" aria-label="Task categories">
+          {categories.map((category) => (
+            <button
+              key={category}
+              className={category === "Dashboard" ? "active" : ""}
+              onClick={() => (category === "Dashboard" ? setActive("dashboard") : setTaskSearch(category === "Today's 5" ? "Today's 5" : category))}
+            >
+              {taskCategoryIcon(category)} {category}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div className="tasks-content">
+        <form className="task-capture" onSubmit={addBrainDump}>
+          <label>
+            <Zap size={17} />
+            <input value={brainDump} onChange={(event) => setBrainDump(event.target.value)} placeholder="Brain dump a task into Random Now..." />
+          </label>
+          <button className="task-details-button" type="button" onClick={() => setDetailsOpen(!detailsOpen)}>
+            Add details <ChevronDown size={15} />
+          </button>
+          <button className="task-add-button" disabled={busyCreate} type="submit">
+            {busyCreate ? <Loader2 className="spin" size={16} /> : null}
+            Add to Random Now
+          </button>
+          {detailsOpen ? (
+            <textarea value={detailNotes} onChange={(event) => setDetailNotes(event.target.value)} placeholder="Add details..." />
+          ) : null}
+        </form>
+
+        <div className="task-search-card">
+          <label>
+            <Search size={20} />
+            <input value={taskSearch} onChange={(event) => setTaskSearch(event.target.value)} placeholder="Search tasks..." />
+          </label>
+          <label className="include-completed">
+            <input type="checkbox" checked={includeCompleted} onChange={(event) => setIncludeCompleted(event.target.checked)} />
+            Include completed
+          </label>
+        </div>
+
+        <article className="encouragement-card">
+          <p>Good afternoon — let's make today count.</p>
+          <em>"Rest is part of the plan, not a break from it."</em>
+        </article>
+
+        <div className="task-stats">
+          <TaskStat value={dueToday.length} label="Due Today" />
+          <TaskStat value={completed.length} label="Completed" />
+          <TaskStat value={activeTasks.length} label="Active" />
+        </div>
+
+        <article className="task-section-card">
+          <div className="task-section-head">
+            <div>
+              <h2>Today's 5 ({displayTasks.length})</h2>
+              <p>{openTodayFive} open · {completeTodayFive} complete</p>
+            </div>
+            <button aria-label="Collapse Today's 5"><ChevronDown size={18} /></button>
+          </div>
+          <div className="task-list">
+            {displayTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                busy={busyId === task.id}
+                onToggle={() => toggleTask(task)}
+                onEdit={() => editTask(task)}
+                onDelete={() => deleteTask(task)}
+                onStar={() => starTask(task)}
+              />
+            ))}
+            {!displayTasks.length ? <div className="empty-dashed">No tasks found for this view.</div> : null}
+          </div>
+        </article>
+      </div>
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button className="active"><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button onClick={() => setActive("links")}>•••<span>More</span></button>
+        <button className="avatar" onClick={refresh} disabled={loading}>T</button>
+      </div>
+    </section>
+  );
+}
+
+function TaskStat({ value, label }) {
+  return (
+    <div className="task-stat-card">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function TaskCard({ task, busy, onToggle, onEdit, onDelete, onStar }) {
+  const done = isTaskDone(task);
+  return (
+    <article className={`task-card ${done ? "done" : ""}`}>
+      <button className="task-check" onClick={onToggle} disabled={busy} aria-label={done ? "Mark task open" : "Mark task completed"}>
+        {busy ? <Loader2 className="spin" size={14} /> : done ? <Check size={14} /> : null}
+      </button>
+      <div className="task-card-body">
+        <h3>{task.title || "Untitled task"}</h3>
+        <div className="task-pills">
+          {task.category ? <span>{task.category}</span> : null}
+          {task.status ? <span>{task.status}</span> : null}
+          {task.dueDate ? <span>{task.dueDate}</span> : null}
+        </div>
+      </div>
+      <div className="task-actions">
+        <button className={task.priority === "Starred" ? "starred" : ""} onClick={onStar} disabled={busy} aria-label="Star task"><Star size={18} /></button>
+        <button onClick={onEdit} disabled={busy} aria-label="Edit task"><Edit3 size={18} /></button>
+        <button className="danger" onClick={onDelete} disabled={busy} aria-label="Delete task"><Trash2 size={18} /></button>
+      </div>
+    </article>
+  );
+}
+
 function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
   const blank = Object.fromEntries(fields.map((field) => [field.name, field.default || ""]));
   const [editing, setEditing] = useState(null);
@@ -629,6 +871,11 @@ function summarize(data) {
   };
 }
 
+function isTaskDone(task) {
+  const status = String(task?.status || "").toLowerCase();
+  return status.includes("done") || status.includes("complete");
+}
+
 function mergeData(live) {
   return {
     tasks: live.tasks || SAMPLE.tasks,
@@ -683,6 +930,35 @@ function longDate() {
     month: "long",
     day: "numeric",
   });
+}
+
+function longDateWithYear() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function taskCategoryIcon(category) {
+  const icons = {
+    Dashboard: "🏠",
+    "Today's 5": "⭐",
+    "Random Now": "🎲",
+    "Random Later": "🔀",
+    Habits: "💪",
+    Kids: "☀️",
+    "The Daily Session": "📓",
+    "The Regulated Mother": "💗",
+    "The Embodied Self": "🌿",
+    Admin: "📋",
+    Household: "🏠",
+    "Husband and Family": "🏡",
+    "Me Time": "✨",
+    Supplies: "🛒",
+  };
+  return icons[category] || "•";
 }
 
 function money(value) {
