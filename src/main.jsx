@@ -164,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" && active !== "finances" ? (
+        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" && active !== "finances" && active !== "outreach" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -186,7 +186,7 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" && active !== "finances" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" && active !== "finances" && active !== "outreach" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
@@ -195,7 +195,7 @@ function App() {
         {active === "clients" && <ClientsPage clients={data.clients} setActive={setActive} mutate={mutate} />}
         {active === "notes" && <NotesPage notes={data.notes} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "finances" && <FinancesPage data={data.finances} mutate={mutate} setActive={setActive} />}
-        {active === "outreach" && <RecordsPage title="Outreach" kind="outreach" records={filterRecords(data.outreach, query, ["name", "status", "category", "email", "notes"])} fields={outreachFields} mutate={mutate} linkField="website" />}
+        {active === "outreach" && <OutreachPage records={data.outreach} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
       </main>
     </div>
   );
@@ -1502,6 +1502,157 @@ function FinanceRow({ record, tab, onTogglePaid, onDelete }) {
   );
 }
 
+function OutreachPage({ records = [], setActive, mutate, refresh, loading }) {
+  const [source, setSource] = useState("All sources");
+  const [status, setStatus] = useState("Pending");
+  const [search, setSearch] = useState("");
+  const [busyId, setBusyId] = useState("");
+  const [busyCreate, setBusyCreate] = useState(false);
+  const sources = ["All sources", ...new Set(records.map((record) => record.source).filter(Boolean))];
+  const pending = records.filter((record) => outreachStatus(record) === "Pending").length;
+  const potential = records.filter((record) => outreachStatus(record) === "Potential").length;
+  const contacted = records.filter((record) => outreachStatus(record) === "Contacted").length;
+  const filtered = records.filter((record) => {
+    const term = search.trim().toLowerCase();
+    const matchesSource = source === "All sources" || record.source === source;
+    const matchesStatus = status === "All" || outreachStatus(record) === status;
+    const matchesTerm = !term || [record.name, record.category, record.source, record.email, record.notes, record.website].some((value) => String(value || "").toLowerCase().includes(term));
+    return matchesSource && matchesStatus && matchesTerm;
+  });
+
+  async function setLeadStatus(record, nextStatus) {
+    setBusyId(record.id);
+    try {
+      await mutate("outreach.update", { ...record, status: nextStatus });
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function addLead() {
+    const name = window.prompt("Lead name or keyword");
+    if (!name?.trim()) return;
+    const category = window.prompt("Category", "Keyword") || "Keyword";
+    setBusyCreate(true);
+    try {
+      await mutate("outreach.create", {
+        sourceKey: "sessionSpot",
+        name: name.trim(),
+        category: category.trim(),
+        status: "Pending",
+      });
+    } finally {
+      setBusyCreate(false);
+    }
+  }
+
+  return (
+    <section className="outreach-page">
+      <header className="calendar-app-header outreach-nav">
+        <div className="calendar-brand">
+          <Home size={20} />
+          <strong>LifeTracker</strong>
+        </div>
+        <nav>
+          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+            <button
+              key={item}
+              className={item === "Outreach" ? "active" : ""}
+              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+        <button className="tasks-avatar" aria-label="Profile">T</button>
+      </header>
+
+      <section className="outreach-hero">
+        <div className="outreach-hero-inner">
+          <p>Outreach Hub</p>
+          <h1>Lead Pipeline</h1>
+          <span>{longDate()}</span>
+          <div className="pipeline-stats">
+            <PipelineStat value={pending} label="Pending" />
+            <PipelineStat value={potential} label="Potential" tone="yellow" />
+            <PipelineStat value={contacted} label="Contacted" tone="peach" />
+          </div>
+          <div className="source-pills">
+            {sources.map((item) => (
+              <button key={item} className={source === item ? "active" : ""} onClick={() => setSource(item)}>{item}</button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="outreach-tabs">
+        {["Pending", "Potential", "Contacted"].map((item) => (
+          <button key={item} className={status === item ? "active" : ""} onClick={() => setStatus(item)}>
+            {item === "Pending" ? "🕵️" : item === "Potential" ? "✨" : "✅"} {item} ({item === "Pending" ? pending : item === "Potential" ? potential : contacted})
+          </button>
+        ))}
+        <button className="add-lead-button" onClick={addLead} disabled={busyCreate}>{busyCreate ? <Loader2 className="spin" size={16} /> : <Plus size={17} />} Add Lead</button>
+      </div>
+
+      <main className="outreach-list-shell">
+        <label className="outreach-search">
+          <Search size={17} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, keyword, neighborhood, category..." />
+        </label>
+        <div className="outreach-list-meta">
+          <span>Showing {filtered.length} of {records.length} records</span>
+          <button onClick={refresh} disabled={loading}>Test {loading ? <Loader2 className="spin" size={14} /> : <RefreshCw size={14} />}</button>
+        </div>
+        <div className="lead-list">
+          {filtered.map((record) => (
+            <LeadCard
+              key={record.id}
+              record={record}
+              busy={busyId === record.id}
+              onPotential={() => setLeadStatus(record, "Potential")}
+              onContacted={() => setLeadStatus(record, "Contacted")}
+            />
+          ))}
+          {!filtered.length ? <div className="empty-dashed">No outreach leads found.</div> : null}
+        </div>
+      </main>
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button className="active">•••<span>More</span></button>
+        <button className="avatar">T</button>
+      </div>
+    </section>
+  );
+}
+
+function PipelineStat({ value, label, tone }) {
+  return (
+    <article className={`pipeline-stat ${tone || ""}`}>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </article>
+  );
+}
+
+function LeadCard({ record, busy, onPotential, onContacted }) {
+  return (
+    <article className="lead-card">
+      <div>
+        <h3>{record.name || "Untitled lead"}</h3>
+        <p>{record.source || "Source"} <span>{record.category || "Keyword"}</span></p>
+      </div>
+      <button className="lead-status">{outreachStatus(record)} <ChevronDown size={15} /></button>
+      <div className="lead-actions">
+        <button onClick={onPotential} disabled={busy}>Potential</button>
+        <button onClick={onContacted} disabled={busy}>Contacted</button>
+      </div>
+    </article>
+  );
+}
+
 function Panel({ title, children, action, onAction }) {
   return (
     <article className="panel">
@@ -1807,6 +1958,13 @@ function noteDate(note) {
 
 function wordCount(content) {
   return String(content || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+function outreachStatus(record) {
+  const status = String(record?.status || "Pending").toLowerCase();
+  if (status.includes("contact")) return "Contacted";
+  if (status.includes("potential")) return "Potential";
+  return "Pending";
 }
 
 function sectionTitle(id) {

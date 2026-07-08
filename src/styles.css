@@ -2890,6 +2890,251 @@ textarea {
   color: #e52525;
 }
 
+.outreach-page {
+  min-height: calc(100vh - 56px);
+  margin: -28px;
+  padding-bottom: 84px;
+  background: #f7f0e8;
+}
+
+.outreach-hero {
+  background: var(--brown);
+  color: #fffaf3;
+}
+
+.outreach-hero-inner {
+  width: min(100%, 400px);
+  margin: 0 auto;
+  padding: 34px 24px 24px;
+}
+
+.outreach-hero p {
+  margin: 0 0 8px;
+  color: #ffbd78;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.outreach-hero h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.outreach-hero-inner > span {
+  display: block;
+  margin-top: 10px;
+  color: rgba(255, 250, 243, 0.72);
+}
+
+.pipeline-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.pipeline-stat {
+  min-height: 74px;
+  border-radius: 12px;
+  background: rgba(255, 250, 243, 0.12);
+  display: grid;
+  place-items: center;
+  align-content: center;
+}
+
+.pipeline-stat strong {
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.pipeline-stat.yellow strong {
+  color: #ffe100;
+}
+
+.pipeline-stat.peach strong {
+  color: #ffd1a9;
+}
+
+.pipeline-stat span {
+  margin-top: 7px;
+  color: rgba(255, 250, 243, 0.64);
+  font-size: 0.82rem;
+}
+
+.source-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.source-pills button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 250, 243, 0.16);
+  color: #fffaf3;
+  padding: 0 13px;
+}
+
+.source-pills button.active {
+  background: rgba(255, 250, 243, 0.34);
+}
+
+.outreach-tabs {
+  min-height: 50px;
+  border-bottom: 1px solid rgba(118, 72, 44, 0.14);
+  background: #fffaf4;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 9px 12px;
+}
+
+.outreach-tabs button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #4a2414;
+  padding: 0 11px;
+  font-weight: 800;
+}
+
+.outreach-tabs button.active {
+  background: #20140e;
+  color: #fffaf3;
+}
+
+.outreach-tabs .add-lead-button {
+  margin-left: auto;
+  border-radius: 8px;
+  background: #c56500;
+  color: #fffaf3;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.outreach-list-shell {
+  width: min(100%, 400px);
+  margin: 0 auto;
+  padding: 18px 16px 84px;
+}
+
+.outreach-search {
+  min-height: 36px;
+  border: 1px solid rgba(118, 72, 44, 0.12);
+  border-radius: 8px;
+  background: #fffaf3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 11px;
+  box-shadow: 0 3px 8px rgba(74, 36, 20, 0.05);
+}
+
+.outreach-search input {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 30px;
+  background: transparent;
+  outline: 0;
+}
+
+.outreach-list-meta {
+  margin: 14px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #5d5149;
+  font-size: 0.85rem;
+}
+
+.outreach-list-meta button {
+  border: 0;
+  background: transparent;
+  color: #5d5149;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lead-list {
+  display: grid;
+  gap: 12px;
+}
+
+.lead-card {
+  min-height: 128px;
+  border: 1px solid rgba(118, 72, 44, 0.12);
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(74, 36, 20, 0.1);
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 12px;
+  align-items: start;
+}
+
+.lead-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lead-card p {
+  margin: 8px 0 0;
+  color: #554940;
+  font-size: 0.86rem;
+}
+
+.lead-card p span {
+  margin-left: 4px;
+}
+
+.lead-status {
+  min-height: 26px;
+  border: 1px solid rgba(118, 72, 44, 0.14);
+  border-radius: 999px;
+  background: #efe9e3;
+  color: #4b4039;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+}
+
+.lead-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+}
+
+.lead-actions button {
+  min-height: 28px;
+  border-radius: 7px;
+  background: #fffaf3;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.lead-actions button:first-child {
+  border: 1px solid #ffc400;
+  color: #9c6500;
+}
+
+.lead-actions button:last-child {
+  border: 1px solid #ff8b3f;
+  color: #cf4a00;
+}
+
 .bottom-nav {
   position: fixed;
   left: 50%;
@@ -2998,6 +3243,31 @@ textarea {
   .finances-page {
     margin: -18px;
     min-height: 100vh;
+  }
+
+  .outreach-page {
+    margin: -18px;
+    min-height: 100vh;
+  }
+
+  .outreach-nav {
+    display: none;
+  }
+
+  .outreach-hero-inner,
+  .outreach-list-shell {
+    width: min(100%, 420px);
+  }
+
+  .outreach-tabs {
+    justify-content: start;
+    overflow-x: auto;
+    gap: 8px;
+  }
+
+  .outreach-tabs .add-lead-button {
+    margin-left: 0;
+    flex: 0 0 auto;
   }
 
   .finances-nav {
@@ -3270,6 +3540,10 @@ textarea {
     display: none;
   }
 
+  .outreach-page .bottom-nav {
+    display: none;
+  }
+
   .tasks-page .bottom-nav {
     display: none;
   }
@@ -3391,6 +3665,14 @@ textarea {
 
   .finance-row {
     grid-template-columns: auto 1fr auto auto;
+  }
+
+  .pipeline-stats {
+    gap: 8px;
+  }
+
+  .outreach-tabs button {
+    padding-inline: 10px;
   }
 
   .welcome-panel {
