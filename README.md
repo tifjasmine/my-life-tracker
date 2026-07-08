@@ -31,6 +31,12 @@ AIRTABLE_DEBT_TABLE=Total Debt
 LINKS_TABLE_ID=tbl...
 ```
 
+If finances live in a separate Airtable base, add:
+
+```bash
+FINANCE_AIRTABLE_BASE_ID=app...
+```
+
 Optional Google Calendar:
 
 ```bash

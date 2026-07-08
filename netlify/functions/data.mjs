@@ -1,4 +1,9 @@
 const LIFE_BASE_ID = process.env.AIRTABLE_BASE_ID || process.env.LIFE_TRACKER_BASE_ID || "appxSbFxzUd4xCbTn";
+const FINANCE_BASE_ID =
+  process.env.FINANCE_AIRTABLE_BASE_ID ||
+  process.env.AIRTABLE_FINANCE_BASE_ID ||
+  process.env.FINANCES_AIRTABLE_BASE_ID ||
+  LIFE_BASE_ID;
 const AIRTABLE_PAT = process.env.AIRTABLE_PAT;
 
 const TABLES = {
@@ -60,9 +65,9 @@ async function loadDashboard() {
     safeList(LIFE_BASE_ID, TABLES.notes, mapNote),
     safeList(LIFE_BASE_ID, TABLES.links, mapLink),
     safeList(LIFE_BASE_ID, TABLES.clients, mapClient),
-    safeList(LIFE_BASE_ID, TABLES.expenses, mapExpense),
-    safeList(LIFE_BASE_ID, TABLES.income, mapIncome),
-    safeList(LIFE_BASE_ID, TABLES.debt, mapDebt),
+    safeList(FINANCE_BASE_ID, TABLES.expenses, mapExpense),
+    safeList(FINANCE_BASE_ID, TABLES.income, mapIncome),
+    safeList(FINANCE_BASE_ID, TABLES.debt, mapDebt),
     loadOutreach(),
   ]);
   return { tasks, notes, links, clients, finances: { expenses, income, debt }, outreach };
@@ -82,9 +87,9 @@ async function handleFinance(verb, payload) {
   const table = TABLES[type];
   if (!table) throw new Error(`Unknown finance table: ${type}`);
   const fields = financeFieldsFor(type, payload);
-  if (op === "create") return createRecord(LIFE_BASE_ID, table, fields);
-  if (op === "update") return updateRecord(LIFE_BASE_ID, table, payload.id, fields);
-  if (op === "delete") return deleteRecord(LIFE_BASE_ID, table, payload.id);
+  if (op === "create") return createRecord(FINANCE_BASE_ID, table, fields);
+  if (op === "update") return updateRecord(FINANCE_BASE_ID, table, payload.id, fields);
+  if (op === "delete") return deleteRecord(FINANCE_BASE_ID, table, payload.id);
   throw new Error(`Unsupported finances action: ${verb}`);
 }
 
