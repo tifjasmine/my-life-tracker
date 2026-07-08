@@ -11,6 +11,7 @@ const TABLES = {
   notes: process.env.AIRTABLE_NOTES_TABLE || "Notes",
   links: process.env.AIRTABLE_LINKS_TABLE || process.env.LINKS_TABLE_ID || "tblyaYNEozqaeFWnp",
   clients: process.env.AIRTABLE_CLIENTS_TABLE || "Weekly Sessions",
+  today: process.env.AIRTABLE_TODAY_TABLE || process.env.AIRTABLE_TODAY_I_WILL_TABLE || "Today I will",
   expenses: process.env.AIRTABLE_EXPENSES_TABLE || process.env.FINANCE_AIRTABLE_TABLE_ID || "tblTe5SntepDSbEpS",
   income: process.env.AIRTABLE_INCOME_TABLE || "Income",
   debt: process.env.AIRTABLE_DEBT_TABLE || "Total Debt",
@@ -50,7 +51,7 @@ export async function handler(event) {
     const [domain, ...parts] = String(action || "").split(".");
     const verb = parts.join(".");
     if (domain === "finances") return respond({ ok: true, data: await handleFinance(verb, payload) });
-    if (["tasks", "notes", "links", "clients"].includes(domain)) return respond({ ok: true, data: await handleRecord(domain, verb, payload) });
+    if (["tasks", "notes", "links", "clients", "today"].includes(domain)) return respond({ ok: true, data: await handleRecord(domain, verb, payload) });
     if (domain === "outreach") return respond({ ok: true, data: await handleOutreach(verb, payload) });
 
     return respond({ ok: false, error: `Unknown action: ${action}` }, 400);
@@ -60,17 +61,18 @@ export async function handler(event) {
 }
 
 async function loadDashboard() {
-  const [tasks, notes, links, clients, expenses, income, debt, outreach] = await Promise.all([
+  const [tasks, notes, links, clients, todayItems, expenses, income, debt, outreach] = await Promise.all([
     safeList(LIFE_BASE_ID, TABLES.tasks, mapTask),
     safeList(LIFE_BASE_ID, TABLES.notes, mapNote),
     safeList(LIFE_BASE_ID, TABLES.links, mapLink),
     safeList(LIFE_BASE_ID, TABLES.clients, mapClient),
+    safeList(LIFE_BASE_ID, TABLES.today, mapTodayItem),
     safeList(FINANCE_BASE_ID, TABLES.expenses, mapExpense),
     safeList(FINANCE_BASE_ID, TABLES.income, mapIncome),
     safeList(FINANCE_BASE_ID, TABLES.debt, mapDebt),
     loadOutreach(),
   ]);
-  return { tasks, notes, links, clients, finances: { expenses, income, debt }, outreach };
+  return { tasks, notes, links, clients, todayItems, finances: { expenses, income, debt }, outreach };
 }
 
 async function handleRecord(kind, verb, payload) {
@@ -187,6 +189,7 @@ function fieldsFor(kind, payload) {
   if (kind === "notes") return { "Note Title": payload.title, Category: payload.category, Body: payload.content };
   if (kind === "links") return { Name: payload.title, Link: payload.url, Category: payload.category, Notes: payload.notes };
   if (kind === "clients") return { Name: payload.name, Status: payload.status, Email: payload.email, "Next Session": payload.nextSession, Notes: payload.notes };
+  if (kind === "today") return { "Checklist Date": payload.date, Content: payload.text, Done: Boolean(payload.done) };
   return {};
 }
 
@@ -215,6 +218,17 @@ function mapLink(record) {
 function mapClient(record) {
   const f = record.fields || {};
   return { id: record.id, name: pick(f, "Name", "Client", "Client Name"), status: pick(f, "Status"), email: pick(f, "Email"), nextSession: pick(f, "Next Session", "Session Date", "Date"), notes: pick(f, "Notes") };
+}
+
+function mapTodayItem(record) {
+  const f = record.fields || {};
+  const done = pick(f, "Done", "Completed", "Complete", "Checked", "Finished");
+  return {
+    id: record.id,
+    text: pick(f, "Content", "Item", "Task", "Task Name", "Title", "Name", "Today I will"),
+    date: pick(f, "Checklist Date", "Date", "Day"),
+    done: done === true || String(done).toLowerCase() === "true" || String(done).toLowerCase() === "done" || String(done).toLowerCase() === "completed",
+  };
 }
 
 function mapExpense(record) {
@@ -284,6 +298,7 @@ function sampleData() {
     notes: [],
     links: [],
     clients: [],
+    todayItems: [],
     outreach: [],
     finances: { expenses: [], income: [], debt: [] },
   };

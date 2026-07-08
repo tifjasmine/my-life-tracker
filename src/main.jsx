@@ -60,6 +60,9 @@ const SAMPLE = {
   notes: [
     { id: "sample-note-1", title: "Morning note", content: "Check the day, choose the next right thing, and keep moving.", category: "Brain Dump", updatedAt: new Date().toISOString() },
   ],
+  todayItems: [
+    { id: "sample-today-1", text: "Choose one thing that makes today easier", date: today(), done: false },
+  ],
   outreach: [
     { id: "sample-outreach-1", name: "massage", status: "Pending", category: "Keyword", email: "", notes: "" },
   ],
@@ -213,12 +216,13 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
   const [todayItems, setTodayItems] = useState(() => loadChecklistItems(today()));
   const [todayText, setTodayText] = useState("");
   const [busyQuickAdd, setBusyQuickAdd] = useState(false);
-  const datedTasks = (data?.tasks || []).filter((task) => {
-    if (task.dueDate === selectedChecklistDate) return true;
-    return selectedChecklistDate === today() && task.category === "Today's 5";
-  });
-  const doneCount = todayItems.filter((item) => item.done).length + datedTasks.filter(isTaskDone).length;
-  const totalCount = todayItems.length + datedTasks.length;
+  const airtableTodayItems = (data?.todayItems || []).filter((item) => sameChecklistDate(item.date, selectedChecklistDate));
+  const combinedTodayItems = [
+    ...airtableTodayItems,
+    ...todayItems.map((item) => ({ ...item, localOnly: true })),
+  ];
+  const doneCount = combinedTodayItems.filter((item) => item.done).length;
+  const totalCount = combinedTodayItems.length;
 
   useEffect(() => {
     setTodayItems(loadChecklistItems(selectedChecklistDate));
@@ -258,7 +262,7 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
     const title = todayText.trim();
     setTodayText("");
     try {
-      await createQuickTask(title, "Today's 5", { dueDate: selectedChecklistDate });
+      await mutate("today.create", { text: title, date: selectedChecklistDate, done: false });
     } catch {
       saveTodayItems([...todayItems, { id: crypto.randomUUID(), text: title, done: false }]);
     }
@@ -268,8 +272,8 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
     saveTodayItems(todayItems.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
   }
 
-  async function toggleTaskItem(task) {
-    await mutate("tasks.update", { ...task, status: isTaskDone(task) ? "Open" : "Completed" });
+  async function toggleAirtableTodayItem(item) {
+    await mutate("today.update", { ...item, done: !item.done });
   }
 
   function submit(event) {
@@ -331,15 +335,13 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
           <button className="outline-button" type="submit"><Plus size={16} /> Add</button>
           {totalCount ? (
             <div className="today-list">
-              {datedTasks.map((task) => (
-                <label className="today-item" key={task.id}>
-                  <input type="checkbox" checked={isTaskDone(task)} onChange={() => toggleTaskItem(task)} />
-                  <span>{task.title}</span>
-                </label>
-              ))}
-              {todayItems.map((item) => (
+              {combinedTodayItems.map((item) => (
                 <label className="today-item" key={item.id}>
-                  <input type="checkbox" checked={item.done} onChange={() => toggleTodayItem(item.id)} />
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={() => (item.localOnly ? toggleTodayItem(item.id) : toggleAirtableTodayItem(item))}
+                  />
                   <span>{item.text}</span>
                 </label>
               ))}
@@ -1830,6 +1832,7 @@ function mergeData(live) {
     links: live.links || SAMPLE.links,
     clients: live.clients || SAMPLE.clients,
     notes: live.notes || SAMPLE.notes,
+    todayItems: live.todayItems || SAMPLE.todayItems,
     outreach: live.outreach || SAMPLE.outreach,
     finances: {
       expenses: live.finances?.expenses || SAMPLE.finances.expenses,
@@ -1856,6 +1859,21 @@ function today() {
 function todaySlash() {
   const date = new Date();
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${date.getFullYear()}`;
+}
+
+function sameChecklistDate(value, isoDate) {
+  const normalized = normalizeDateValue(value);
+  return normalized === isoDate;
+}
+
+function normalizeDateValue(value) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
+  const slash = String(value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) return `${slash[3]}-${slash[1].padStart(2, "0")}-${slash[2].padStart(2, "0")}`;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().slice(0, 10);
 }
 
 function addDays(days) {
