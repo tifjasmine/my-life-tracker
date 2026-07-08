@@ -105,8 +105,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (unlocked) loadData();
-  }, [unlocked]);
+    loadData();
+  }, []);
 
   async function mutate(action, payload) {
     const result = await api(action, payload);
@@ -118,6 +118,9 @@ function App() {
   if (!unlocked) {
     return (
       <LockScreen
+        data={data}
+        mutate={mutate}
+        loading={loading}
         onUnlock={() => {
           sessionStorage.setItem("lifeTrackerUnlocked", "true");
           setUnlocked(true);
@@ -201,16 +204,25 @@ function App() {
   );
 }
 
-function LockScreen({ onUnlock }) {
+function LockScreen({ onUnlock, data, mutate, loading }) {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
+  const [brainDump, setBrainDump] = useState("");
+  const [detailNotes, setDetailNotes] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedChecklistDate, setSelectedChecklistDate] = useState(() => {
     rolloverChecklistItems();
     return today();
   });
   const [todayItems, setTodayItems] = useState(() => loadChecklistItems(today()));
   const [todayText, setTodayText] = useState("");
-  const doneCount = todayItems.filter((item) => item.done).length;
+  const [busyQuickAdd, setBusyQuickAdd] = useState(false);
+  const datedTasks = (data?.tasks || []).filter((task) => {
+    if (task.dueDate === selectedChecklistDate) return true;
+    return selectedChecklistDate === today() && task.category === "Today's 5";
+  });
+  const doneCount = todayItems.filter((item) => item.done).length + datedTasks.filter(isTaskDone).length;
+  const totalCount = todayItems.length + datedTasks.length;
 
   useEffect(() => {
     setTodayItems(loadChecklistItems(selectedChecklistDate));
@@ -221,15 +233,47 @@ function LockScreen({ onUnlock }) {
     saveChecklistItems(selectedChecklistDate, items);
   }
 
-  function addTodayItem(event) {
+  async function createQuickTask(title, category, extra = {}) {
+    setBusyQuickAdd(true);
+    try {
+      await mutate("tasks.create", {
+        title,
+        category,
+        status: "Open",
+        notes: detailNotes,
+        ...extra,
+      });
+    } finally {
+      setBusyQuickAdd(false);
+    }
+  }
+
+  async function addBrainDump(category) {
+    if (!brainDump.trim()) return;
+    await createQuickTask(brainDump.trim(), category);
+    setBrainDump("");
+    setDetailNotes("");
+    setDetailsOpen(false);
+  }
+
+  async function addTodayItem(event) {
     event.preventDefault();
     if (!todayText.trim()) return;
-    saveTodayItems([...todayItems, { id: crypto.randomUUID(), text: todayText.trim(), done: false }]);
+    const title = todayText.trim();
     setTodayText("");
+    try {
+      await createQuickTask(title, "Today's 5", { dueDate: selectedChecklistDate });
+    } catch {
+      saveTodayItems([...todayItems, { id: crypto.randomUUID(), text: title, done: false }]);
+    }
   }
 
   function toggleTodayItem(id) {
     saveTodayItems(todayItems.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
+  }
+
+  async function toggleTaskItem(task) {
+    await mutate("tasks.update", { ...task, status: isTaskDone(task) ? "Open" : "Completed" });
   }
 
   function submit(event) {
@@ -272,10 +316,11 @@ function LockScreen({ onUnlock }) {
         <article className="home-card locked-preview">
           <h3>Brain dump a task</h3>
           <p>Quickly add a task without opening the full dashboard.</p>
-          <input disabled placeholder="Brain dump a task..." />
-          <button className="outline-button" disabled>Add details</button>
-          <button className="brown-button" disabled><Plus size={17} /> Random Now</button>
-          <button className="orange-button" disabled><Sparkles size={17} /> Today's 5</button>
+          <input value={brainDump} onChange={(event) => setBrainDump(event.target.value)} placeholder="Brain dump a task..." />
+          {detailsOpen ? <textarea value={detailNotes} onChange={(event) => setDetailNotes(event.target.value)} placeholder="Add details..." /> : null}
+          <button className="outline-button" type="button" onClick={() => setDetailsOpen(!detailsOpen)}>Add details</button>
+          <button className="brown-button" type="button" disabled={busyQuickAdd || loading} onClick={() => addBrainDump("Random Now")}><Plus size={17} /> Random Now</button>
+          <button className="orange-button" type="button" disabled={busyQuickAdd || loading} onClick={() => addBrainDump("Today's 5")}><Sparkles size={17} /> Today's 5</button>
         </article>
         <form className="home-card locked-preview" onSubmit={addTodayItem}>
           <div className="today-head">
@@ -283,7 +328,7 @@ function LockScreen({ onUnlock }) {
               <h3>Today I will</h3>
               <p>Saved by date, ready after unlock.</p>
             </div>
-            <span>{doneCount}/{todayItems.length} done</span>
+            <span>{doneCount}/{totalCount} done</span>
           </div>
           <label>
             <span>Checklist date</span>
@@ -292,8 +337,14 @@ function LockScreen({ onUnlock }) {
           <button className="outline-button" type="button" onClick={() => setSelectedChecklistDate(today())}>Today</button>
           <input value={todayText} onChange={(event) => setTodayText(event.target.value)} placeholder="Add one thing for today..." />
           <button className="outline-button" type="submit"><Plus size={16} /> Add</button>
-          {todayItems.length ? (
+          {totalCount ? (
             <div className="today-list">
+              {datedTasks.map((task) => (
+                <label className="today-item" key={task.id}>
+                  <input type="checkbox" checked={isTaskDone(task)} onChange={() => toggleTaskItem(task)} />
+                  <span>{task.title}</span>
+                </label>
+              ))}
               {todayItems.map((item) => (
                 <label className="today-item" key={item.id}>
                   <input type="checkbox" checked={item.done} onChange={() => toggleTodayItem(item.id)} />
