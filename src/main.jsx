@@ -204,6 +204,32 @@ function App() {
 function LockScreen({ onUnlock }) {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
+  const todayKey = `lifeTrackerChecklist:${today()}`;
+  const [todayItems, setTodayItems] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(todayKey) || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [todayText, setTodayText] = useState("");
+  const doneCount = todayItems.filter((item) => item.done).length;
+
+  function saveTodayItems(items) {
+    setTodayItems(items);
+    localStorage.setItem(todayKey, JSON.stringify(items));
+  }
+
+  function addTodayItem(event) {
+    event.preventDefault();
+    if (!todayText.trim()) return;
+    saveTodayItems([...todayItems, { id: crypto.randomUUID(), text: todayText.trim(), done: false }]);
+    setTodayText("");
+  }
+
+  function toggleTodayItem(id) {
+    saveTodayItems(todayItems.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
+  }
 
   function submit(event) {
     event.preventDefault();
@@ -250,23 +276,34 @@ function LockScreen({ onUnlock }) {
           <button className="brown-button" disabled><Plus size={17} /> Random Now</button>
           <button className="orange-button" disabled><Sparkles size={17} /> Today's 5</button>
         </article>
-        <article className="home-card locked-preview">
+        <form className="home-card locked-preview" onSubmit={addTodayItem}>
           <div className="today-head">
             <div>
               <h3>Today I will</h3>
               <p>Saved by date, ready after unlock.</p>
             </div>
-            <span>0/0 done</span>
+            <span>{doneCount}/{todayItems.length} done</span>
           </div>
           <label>
             <span>Checklist date</span>
-            <input disabled value={todaySlash()} readOnly />
+            <input value={todaySlash()} readOnly />
           </label>
-          <button className="outline-button" disabled>Today</button>
-          <input disabled placeholder="Add one thing for today..." />
-          <button className="outline-button" disabled><Plus size={16} /> Add</button>
-          <div className="empty-dashed">Unlock to add checklist items.</div>
-        </article>
+          <button className="outline-button" type="button">Today</button>
+          <input value={todayText} onChange={(event) => setTodayText(event.target.value)} placeholder="Add one thing for today..." />
+          <button className="outline-button" type="submit"><Plus size={16} /> Add</button>
+          {todayItems.length ? (
+            <div className="today-list">
+              {todayItems.map((item) => (
+                <label className="today-item" key={item.id}>
+                  <input type="checkbox" checked={item.done} onChange={() => toggleTodayItem(item.id)} />
+                  <span>{item.text}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-dashed">Add checklist items here before unlocking.</div>
+          )}
+        </form>
       </section>
     </main>
   );
