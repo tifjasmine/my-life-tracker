@@ -164,7 +164,7 @@ function App() {
       </aside>
 
       <main className={active === "dashboard" ? "home-main" : ""}>
-        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" ? (
+        {active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" ? (
           <header className="topbar">
             <button className="icon-button menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open navigation">
               <Menu size={20} />
@@ -186,14 +186,14 @@ function App() {
           </header>
         ) : null}
 
-        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" ? <div className="notice">{notice}</div> : null}
+        {notice && active !== "dashboard" && active !== "tasks" && active !== "calendar" && active !== "links" && active !== "clients" && active !== "notes" ? <div className="notice">{notice}</div> : null}
 
         {active === "dashboard" && <Dashboard data={data} stats={stats} setActive={setActive} mutate={mutate} query={query} />}
         {active === "tasks" && <TasksPage tasks={data.tasks} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "calendar" && <CalendarPage tasks={data.tasks} mutate={mutate} setActive={setActive} />}
         {active === "links" && <LinksPage links={data.links} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "clients" && <ClientsPage clients={data.clients} setActive={setActive} mutate={mutate} />}
-        {active === "notes" && <RecordsPage title="Notes" kind="notes" records={filterRecords(data.notes, query, ["title", "content", "category"])} fields={noteFields} mutate={mutate} />}
+        {active === "notes" && <NotesPage notes={data.notes} setActive={setActive} mutate={mutate} refresh={loadData} loading={loading} />}
         {active === "finances" && <FinancesPage data={data.finances} mutate={mutate} />}
         {active === "outreach" && <RecordsPage title="Outreach" kind="outreach" records={filterRecords(data.outreach, query, ["name", "status", "category", "email", "notes"])} fields={outreachFields} mutate={mutate} linkField="website" />}
       </main>
@@ -1029,6 +1029,127 @@ function AddSessionModal({ clients = [], mutate, onClose }) {
   );
 }
 
+function NotesPage({ notes = [], setActive, mutate, refresh, loading }) {
+  const [noteSearch, setNoteSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All Notes");
+  const [lockedOnly, setLockedOnly] = useState(false);
+  const [busyCreate, setBusyCreate] = useState(false);
+
+  const categories = useMemo(() => {
+    const found = [...new Set(notes.map((note) => note.category || "Brain Dump"))];
+    return ["All Notes", ...found];
+  }, [notes]);
+
+  const filteredNotes = useMemo(() => {
+    const term = noteSearch.trim().toLowerCase();
+    return notes.filter((note) => {
+      const locked = isLockedNote(note);
+      const matchesCategory = selectedCategory === "All Notes" || (note.category || "Brain Dump") === selectedCategory;
+      const matchesTerm = !term || [note.title, note.content, note.category].some((value) => String(value || "").toLowerCase().includes(term));
+      return matchesCategory && matchesTerm && (!lockedOnly || locked);
+    });
+  }, [notes, noteSearch, selectedCategory, lockedOnly]);
+
+  async function addNote() {
+    const title = window.prompt("Note title");
+    if (!title?.trim()) return;
+    const content = window.prompt("Note body", "") || "";
+    setBusyCreate(true);
+    try {
+      await mutate("notes.create", {
+        title: title.trim(),
+        category: selectedCategory === "All Notes" ? "Brain Dump" : selectedCategory,
+        content,
+      });
+    } finally {
+      setBusyCreate(false);
+    }
+  }
+
+  return (
+    <section className="notes-page">
+      <header className="calendar-app-header notes-nav">
+        <div className="calendar-brand">
+          <Home size={20} />
+          <strong>LifeTracker</strong>
+        </div>
+        <nav>
+          {["Unlocked", "Tasks", "Clients", "Calendar", "Finances", "Links", "Notes", "Dashboard", "Outreach"].map((item) => (
+            <button
+              key={item}
+              className={item === "Notes" ? "active" : ""}
+              onClick={() => setActive(item === "Unlocked" ? "dashboard" : item.toLowerCase())}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+        <button className="tasks-avatar" aria-label="Profile">T</button>
+      </header>
+
+      <div className="notes-shell">
+        <section className="notes-controls">
+          <label className="notes-search">
+            <Search size={18} />
+            <input value={noteSearch} onChange={(event) => setNoteSearch(event.target.value)} placeholder="Search notes..." />
+          </label>
+          <button className="note-filter-button"><PinIcon /> Pinned</button>
+          <button className={`note-filter-button ${lockedOnly ? "active" : ""}`} onClick={() => setLockedOnly(!lockedOnly)}><LockKeyhole size={16} /> Locked</button>
+          <button className="notes-refresh" onClick={refresh} disabled={loading} aria-label="Refresh notes">
+            {loading ? <Loader2 className="spin" size={17} /> : <RefreshCw size={17} />}
+          </button>
+          <button className="notes-add" onClick={addNote} disabled={busyCreate} aria-label="Add note">
+            {busyCreate ? <Loader2 className="spin" size={17} /> : <Plus size={17} />}
+          </button>
+          <div className="notes-chip-row">
+            {categories.map((category) => (
+              <button key={category} className={selectedCategory === category ? "active" : ""} onClick={() => setSelectedCategory(category)}>
+                {category}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="notes-list">
+          {filteredNotes.map((note) => <NoteCard key={note.id} note={note} />)}
+          {!filteredNotes.length ? <div className="empty-dashed">No notes found.</div> : null}
+          <div className="notes-count"><FileText size={15} /> {notes.length} notes saved</div>
+        </section>
+      </div>
+
+      <div className="bottom-nav">
+        <button onClick={() => setActive("dashboard")}><Home size={18} />Unlocked</button>
+        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
+        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
+        <button className="active">•••<span>More</span></button>
+        <button className="avatar">T</button>
+      </div>
+    </section>
+  );
+}
+
+function NoteCard({ note }) {
+  const locked = isLockedNote(note);
+  return (
+    <article className={`note-card ${locked ? "locked" : ""}`}>
+      <span className="note-pin"><PinIcon /></span>
+      <div className="note-body">
+        <div className="note-title-row">
+          <h3>{note.title || "Untitled"}</h3>
+          {note.category ? <span className="note-category">{note.category}</span> : null}
+          {locked ? <span className="locked-pill"><LockKeyhole size={13} /> Locked</span> : null}
+        </div>
+        <p>{locked ? "This note is locked. Enter the passcode to view or edit it." : note.content || "No note body yet."}</p>
+        <small>{noteDate(note)} · {wordCount(note.content)} words</small>
+      </div>
+    </article>
+  );
+}
+
+function PinIcon(props) {
+  return <span className="pin-glyph" {...props}>♟</span>;
+}
+
 function RecordsPage({ title, kind, records, fields, mutate, linkField }) {
   const blank = Object.fromEntries(fields.map((field) => [field.name, field.default || ""]));
   const [editing, setEditing] = useState(null);
@@ -1521,6 +1642,23 @@ function slashToIso(value) {
   const [month, day, year] = String(value || "").split("/");
   if (!month || !day || !year) return today();
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function isLockedNote(note) {
+  const text = `${note?.title || ""} ${note?.category || ""} ${note?.content || ""}`.toLowerCase();
+  return text.includes("locked") || text.includes("token");
+}
+
+function noteDate(note) {
+  const value = note?.updatedAt || "";
+  if (!value) return "May 17";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function wordCount(content) {
+  return String(content || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
 function sectionTitle(id) {
