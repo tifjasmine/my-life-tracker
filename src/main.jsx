@@ -204,20 +204,21 @@ function App() {
 function LockScreen({ onUnlock }) {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
-  const todayKey = `lifeTrackerChecklist:${today()}`;
-  const [todayItems, setTodayItems] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(todayKey) || "[]");
-    } catch {
-      return [];
-    }
+  const [selectedChecklistDate, setSelectedChecklistDate] = useState(() => {
+    rolloverChecklistItems();
+    return today();
   });
+  const [todayItems, setTodayItems] = useState(() => loadChecklistItems(today()));
   const [todayText, setTodayText] = useState("");
   const doneCount = todayItems.filter((item) => item.done).length;
 
+  useEffect(() => {
+    setTodayItems(loadChecklistItems(selectedChecklistDate));
+  }, [selectedChecklistDate]);
+
   function saveTodayItems(items) {
     setTodayItems(items);
-    localStorage.setItem(todayKey, JSON.stringify(items));
+    saveChecklistItems(selectedChecklistDate, items);
   }
 
   function addTodayItem(event) {
@@ -286,9 +287,9 @@ function LockScreen({ onUnlock }) {
           </div>
           <label>
             <span>Checklist date</span>
-            <input value={todaySlash()} readOnly />
+            <input type="date" value={selectedChecklistDate} onChange={(event) => setSelectedChecklistDate(event.target.value || today())} />
           </label>
-          <button className="outline-button" type="button">Today</button>
+          <button className="outline-button" type="button" onClick={() => setSelectedChecklistDate(today())}>Today</button>
           <input value={todayText} onChange={(event) => setTodayText(event.target.value)} placeholder="Add one thing for today..." />
           <button className="outline-button" type="submit"><Plus size={16} /> Add</button>
           {todayItems.length ? (
@@ -1818,6 +1819,69 @@ function addDays(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+const CHECKLIST_PREFIX = "lifeTrackerChecklist:";
+
+function checklistKey(date) {
+  return `${CHECKLIST_PREFIX}${date}`;
+}
+
+function loadChecklistItems(date) {
+  try {
+    return JSON.parse(localStorage.getItem(checklistKey(date)) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveChecklistItems(date, items) {
+  localStorage.setItem(checklistKey(date), JSON.stringify(items));
+}
+
+function addIsoDays(dateString, days) {
+  const date = new Date(`${dateString}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function rolloverChecklistItems(targetDate = today()) {
+  if (typeof localStorage === "undefined") return;
+  let moved = true;
+  let guard = 0;
+  while (moved && guard < 370) {
+    moved = false;
+    guard += 1;
+    const dates = Object.keys(localStorage)
+      .filter((key) => key.startsWith(CHECKLIST_PREFIX))
+      .map((key) => key.slice(CHECKLIST_PREFIX.length))
+      .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+      .sort();
+
+    for (const date of dates) {
+      if (date >= targetDate) continue;
+      const items = loadChecklistItems(date);
+      const checked = items.filter((item) => item.done);
+      const unchecked = items.filter((item) => !item.done);
+      if (!unchecked.length) continue;
+
+      const nextDate = addIsoDays(date, 1);
+      const nextItems = loadChecklistItems(nextDate);
+      const carried = unchecked.map((item) => ({
+        ...item,
+        id: item.id || crypto.randomUUID(),
+        carriedFrom: item.carriedFrom || date,
+      }));
+      const merged = [
+        ...nextItems,
+        ...carried.filter((item) => !nextItems.some((nextItem) => (nextItem.id && nextItem.id === item.id) || (nextItem.text === item.text && nextItem.carriedFrom === item.carriedFrom))),
+      ];
+
+      saveChecklistItems(date, checked);
+      saveChecklistItems(nextDate, merged);
+      moved = true;
+    }
+  }
 }
 
 function monthName() {
