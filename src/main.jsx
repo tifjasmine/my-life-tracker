@@ -943,12 +943,13 @@ function ClientsPage({ clients = [], setActive, mutate }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [openCarried, setOpenCarried] = useState({});
   const sessions = clients.length ? clients : SAMPLE.clients;
+  const thisWeekSessions = currentWeekSessions(sessions);
   const weekSessions = currentWeekCompletedSessions(sessions);
   const weekPotential = 966;
   const earned = sumSessionRates(weekSessions);
   const progress = Math.min(100, Math.round((earned / weekPotential) * 100));
   const closed = sessions.filter((client) => String(client.status || "").toLowerCase().includes("closed")).length;
-  const grouped = groupSessions(sessions);
+  const grouped = groupSessions(thisWeekSessions);
   const carriedGroups = groupCarriedSessions(sessions);
   const carriedTotal = Object.values(carriedGroups).reduce((total, records) => total + records.length, 0);
 
@@ -1010,7 +1011,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
       <main className="clients-week">
         <div className="clients-week-head">
           <strong>Week of Jul 5</strong>
-          <span>{sessions.length} sessions · <b>{carriedTotal} carried over</b> <RefreshCw size={14} /></span>
+          <span>{thisWeekSessions.length} sessions · <b>{carriedTotal} carried over</b> <RefreshCw size={14} /></span>
         </div>
         <div className="carried-list">
           {Object.entries(carriedGroups).map(([label, records]) => (
@@ -1041,6 +1042,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
               {records.map((session) => <SessionCard key={session.id} session={session} mutate={mutate} />)}
             </section>
           ))}
+          {!Object.keys(grouped).length ? <div className="empty-dashed">No sessions scheduled this week.</div> : null}
         </div>
       </main>
 
@@ -1924,6 +1926,15 @@ function currentWeekCompletedSessions(sessions = []) {
   });
 }
 
+function currentWeekSessions(sessions = []) {
+  const { start, end } = currentWeekRange();
+  return sessions.filter((session) => {
+    const date = parseIsoDate(session.nextSession);
+    if (!date || date < start || date > end) return false;
+    return !String(session.status || "").toLowerCase().includes("cancel");
+  });
+}
+
 function currentWeekRange(reference = new Date()) {
   const start = new Date(reference);
   start.setHours(0, 0, 0, 0);
@@ -2174,7 +2185,9 @@ function uniqueClients(records = []) {
 }
 
 function groupSessions(records = []) {
-  const sorted = [...records].sort((a, b) => String(a.nextSession || "").localeCompare(String(b.nextSession || "")));
+  const sorted = [...records]
+    .filter((record) => parseIsoDate(record.nextSession))
+    .sort((a, b) => String(a.nextSession || "").localeCompare(String(b.nextSession || "")));
   return sorted.reduce((groups, record) => {
     const key = shortSessionDay(record.nextSession);
     groups[key] = groups[key] || [];
@@ -2212,7 +2225,7 @@ function sessionTime(session) {
 
 function shortSessionDay(value) {
   const date = value ? new Date(`${value}T12:00:00`) : new Date();
-  if (Number.isNaN(date.getTime())) return "Mon, Jul 6";
+  if (Number.isNaN(date.getTime())) return "No date";
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
