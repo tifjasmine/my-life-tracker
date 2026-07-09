@@ -216,7 +216,7 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
   const [todayItems, setTodayItems] = useState(() => loadChecklistItems(today()));
   const [todayText, setTodayText] = useState("");
   const [busyQuickAdd, setBusyQuickAdd] = useState(false);
-  const airtableTodayItems = (data?.todayItems || []).filter((item) => sameChecklistDate(item.date, selectedChecklistDate));
+  const airtableTodayItems = (data?.todayItems || []).filter((item) => !item.done);
   const combinedTodayItems = [
     ...airtableTodayItems,
     ...todayItems.map((item) => ({ ...item, localOnly: true })),
@@ -347,7 +347,7 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
               ))}
             </div>
           ) : (
-            <div className="empty-dashed">No items for this date.</div>
+            <div className="empty-dashed">No unchecked items.</div>
           )}
         </form>
       </section>
@@ -1859,21 +1859,6 @@ function today() {
 function todaySlash() {
   const date = new Date();
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${date.getFullYear()}`;
-}
-
-function sameChecklistDate(value, isoDate) {
-  const normalized = normalizeDateValue(value);
-  return normalized === isoDate;
-}
-
-function normalizeDateValue(value) {
-  if (!value) return "";
-  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
-  const slash = String(value).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slash) return `${slash[3]}-${slash[1].padStart(2, "0")}-${slash[2].padStart(2, "0")}`;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toISOString().slice(0, 10);
 }
 
 function addDays(days) {
