@@ -216,11 +216,11 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
   const [todayItems, setTodayItems] = useState(() => loadChecklistItems(today()));
   const [todayText, setTodayText] = useState("");
   const [busyQuickAdd, setBusyQuickAdd] = useState(false);
-  const airtableTodayItems = (data?.todayItems || []).filter((item) => !item.done);
+  const airtableTodayItems = [...(data?.todayItems || [])].sort(sortChecklistItems);
   const combinedTodayItems = [
     ...airtableTodayItems,
     ...todayItems.map((item) => ({ ...item, localOnly: true })),
-  ];
+  ].sort(sortChecklistItems);
   const doneCount = combinedTodayItems.filter((item) => item.done).length;
   const totalCount = combinedTodayItems.length;
 
@@ -347,7 +347,7 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
               ))}
             </div>
           ) : (
-            <div className="empty-dashed">No unchecked items.</div>
+            <div className="empty-dashed">No Today I will items yet.</div>
           )}
         </form>
       </section>
@@ -1824,6 +1824,11 @@ function summarize(data) {
 function isTaskDone(task) {
   const status = String(task?.status || "").toLowerCase();
   return status.includes("done") || status.includes("complete");
+}
+
+function sortChecklistItems(a, b) {
+  if (Boolean(a.done) !== Boolean(b.done)) return a.done ? 1 : -1;
+  return 0;
 }
 
 function mergeData(live) {
