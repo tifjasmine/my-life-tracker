@@ -23,6 +23,15 @@ const TODAY_FIELDS = {
   done: process.env.AIRTABLE_TODAY_DONE_FIELD || "Done",
 };
 
+const TODAY_DONE_FIELD_CANDIDATES = unique([
+  TODAY_FIELDS.done,
+  "Done",
+  "Complete",
+  "Completed",
+  "Checked",
+  "Finished",
+]);
+
 const OUTREACH_SOURCES = {
   sessionSpot: {
     baseId: "appQxIhwr00DmKBx5",
@@ -83,11 +92,37 @@ async function loadDashboard() {
 
 async function handleRecord(kind, verb, payload) {
   const table = TABLES[kind];
+  if (kind === "today") return handleTodayRecord(verb, payload);
   const fields = fieldsFor(kind, payload);
   if (verb === "create") return createRecord(LIFE_BASE_ID, table, fields);
   if (verb === "update") return updateRecord(LIFE_BASE_ID, table, payload.id, fields);
   if (verb === "delete") return deleteRecord(LIFE_BASE_ID, table, payload.id);
   throw new Error(`Unsupported ${kind} action: ${verb}`);
+}
+
+async function handleTodayRecord(verb, payload) {
+  const table = TABLES.today;
+  if (verb === "create") return createRecord(LIFE_BASE_ID, table, fieldsFor("today", payload));
+  if (verb === "update") {
+    const isDoneOnlyUpdate = payload.done !== undefined && payload.text === undefined && payload.date === undefined;
+    if (isDoneOnlyUpdate) return updateTodayDone(table, payload.id, Boolean(payload.done));
+    return updateRecord(LIFE_BASE_ID, table, payload.id, fieldsFor("today", payload));
+  }
+  if (verb === "delete") return deleteRecord(LIFE_BASE_ID, table, payload.id);
+  throw new Error(`Unsupported today action: ${verb}`);
+}
+
+async function updateTodayDone(table, id, done) {
+  let lastError;
+  for (const fieldName of TODAY_DONE_FIELD_CANDIDATES) {
+    try {
+      return await updateRecord(LIFE_BASE_ID, table, id, { [fieldName]: done });
+    } catch (error) {
+      lastError = error;
+      if (!isFieldNameError(error)) break;
+    }
+  }
+  throw lastError || new Error("Could not update Today I will checkbox.");
 }
 
 async function handleFinance(verb, payload) {
@@ -285,6 +320,14 @@ function pick(fields, ...names) {
 
 function clean(fields) {
   return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined && value !== ""));
+}
+
+function isFieldNameError(error) {
+  return /unknown field|field .*does not exist|invalid field|cannot accept/i.test(String(error?.message || ""));
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function num(value) {
