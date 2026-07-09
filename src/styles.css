@@ -3200,12 +3200,49 @@ textarea {
   color: #cf4a00;
 }
 
-.bottom-nav {
+.bottom-nav-wrap {
   position: fixed;
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
   width: min(100%, 392px);
+  z-index: 20;
+}
+
+.more-menu {
+  margin: 0 10px 8px;
+  padding: 10px;
+  border: 1px solid rgba(23, 63, 53, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 250, 244, 0.98);
+  box-shadow: 0 -14px 32px rgba(23, 63, 53, 0.12);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.more-menu button {
+  min-height: 42px;
+  border: 1px solid rgba(217, 184, 149, 0.62);
+  border-radius: 12px;
+  background: #fffdf8;
+  color: #3f2518;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.more-menu button.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.bottom-nav {
   height: 68px;
   background: rgba(255, 250, 244, 0.94);
   border-top: 1px solid rgba(23, 63, 53, 0.12);
@@ -3213,7 +3250,6 @@ textarea {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
-  z-index: 20;
 }
 
 .bottom-nav button {
@@ -3587,31 +3623,31 @@ textarea {
 }
 
 @media (min-width: 981px) {
-  .calendar-page .bottom-nav {
+  .calendar-page .bottom-nav-wrap {
     display: none;
   }
 
-  .links-page .bottom-nav {
+  .links-page .bottom-nav-wrap {
     display: none;
   }
 
-  .clients-page .bottom-nav {
+  .clients-page .bottom-nav-wrap {
     display: none;
   }
 
-  .notes-page .bottom-nav {
+  .notes-page .bottom-nav-wrap {
     display: none;
   }
 
-  .finances-page .bottom-nav {
+  .finances-page .bottom-nav-wrap {
     display: none;
   }
 
-  .outreach-page .bottom-nav {
+  .outreach-page .bottom-nav-wrap {
     display: none;
   }
 
-  .tasks-page .bottom-nav {
+  .tasks-page .bottom-nav-wrap {
     display: none;
   }
 

@@ -392,15 +392,51 @@ function Dashboard({ data, stats, setActive, mutate }) {
   return <HomeDashboard data={data} stats={stats} upcoming={upcoming} setActive={setActive} mutate={mutate} />;
 }
 
+function BottomNav({ active, setActive, avatarAction, avatarDisabled }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreItems = SECTIONS.filter((section) => !["dashboard", "tasks", "clients"].includes(section.id));
+
+  function go(sectionId) {
+    setMoreOpen(false);
+    setActive(sectionId);
+  }
+
+  return (
+    <div className="bottom-nav-wrap">
+      {moreOpen ? (
+        <div className="more-menu">
+          {moreItems.map((section) => {
+            const Icon = section.icon;
+            return (
+              <button key={section.id} className={active === section.id ? "active" : ""} onClick={() => go(section.id)}>
+                <Icon size={17} />
+                <span>{section.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+      <div className="bottom-nav">
+        <button className={active === "dashboard" ? "active" : ""} onClick={() => go("dashboard")}><Home size={18} />Home</button>
+        <button className={active === "tasks" ? "active" : ""} onClick={() => go("tasks")}><Check size={18} />Tasks</button>
+        <button className={active === "clients" ? "active" : ""} onClick={() => go("clients")}><UsersRound size={18} />Clients</button>
+        <button className={moreOpen || moreItems.some((item) => item.id === active) ? "active" : ""} onClick={() => setMoreOpen((open) => !open)}>•••<span>More</span></button>
+        <button className="avatar" onClick={avatarAction} disabled={avatarDisabled}>T</button>
+      </div>
+    </div>
+  );
+}
+
 function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
   const [brainDump, setBrainDump] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailNotes, setDetailNotes] = useState("");
   const [homeSearch, setHomeSearch] = useState("");
   const todaysFive = data.tasks.filter((task) => task.category === "Today's 5");
-  const sessionsThisWeek = data.clients.filter((client) => String(client.status || "").toLowerCase() !== "canceled").length;
+  const weekSessions = currentWeekCompletedSessions(data.clients);
+  const sessionsThisWeek = weekSessions.length;
   const unpaid = stats.unpaid || stats.expenses;
-  const earnings = Math.max(0, sessionsThisWeek * 36.9);
+  const earnings = sumSessionRates(weekSessions);
   const potential = 966;
   const progress = Math.min(100, Math.round((earnings / potential) * 100));
 
@@ -438,6 +474,7 @@ function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
         <div className="hero-pills">
           <button onClick={() => setActive("tasks")}>◎ Tasks</button>
           <button onClick={() => setActive("clients")}><UsersRound size={14} /> Clients</button>
+          <button onClick={() => setActive("finances")}><CircleDollarSign size={14} /> Finances</button>
           <button onClick={() => setActive("notes")}><BookOpenText size={14} /> Notes</button>
           <button onClick={() => setActive("links")}><LinkIcon size={14} /> Links</button>
         </div>
@@ -482,13 +519,7 @@ function HomeDashboard({ data, stats, upcoming, setActive, mutate }) {
         ))}
       </div>
 
-      <div className="bottom-nav">
-        <button className="active"><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button onClick={() => setActive("links")}>•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="dashboard" setActive={setActive} />
     </section>
   );
 }
@@ -718,13 +749,7 @@ function TasksPage({ tasks = [], setActive, mutate, refresh, loading }) {
         </article>
       </div>
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button className="active"><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button onClick={() => setActive("links")}>•••<span>More</span></button>
-        <button className="avatar" onClick={refresh} disabled={loading}>T</button>
-      </div>
+      <BottomNav active="tasks" setActive={setActive} avatarAction={refresh} avatarDisabled={loading} />
     </section>
   );
 }
@@ -877,13 +902,7 @@ function LinksPage({ links = [], setActive, mutate, refresh, loading }) {
         </section>
       </div>
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button className="active">•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="links" setActive={setActive} />
     </section>
   );
 }
@@ -923,8 +942,9 @@ function ClientsPage({ clients = [], setActive, mutate }) {
   const [tab, setTab] = useState("This Week");
   const [modalOpen, setModalOpen] = useState(false);
   const sessions = clients.length ? clients : SAMPLE.clients;
+  const weekSessions = currentWeekCompletedSessions(sessions);
   const weekPotential = 966;
-  const earned = Math.max(0, Math.round(sessions.length * 36.9));
+  const earned = sumSessionRates(weekSessions);
   const progress = Math.min(100, Math.round((earned / weekPotential) * 100));
   const closed = sessions.filter((client) => String(client.status || "").toLowerCase().includes("closed")).length;
   const grouped = groupSessions(sessions);
@@ -974,7 +994,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
               <strong>{money(weekPotential)}</strong>
             </div>
             <div className="progress-bar"><i style={{ width: `${progress}%` }} /></div>
-            <em>{progress}% earned · {Math.min(sessions.length, 10)}/10 sessions held</em>
+            <em>{progress}% earned · {Math.min(weekSessions.length, 10)}/10 sessions held</em>
           </div>
           <div className="practice-pills">
             <span><UsersRound size={15} /> {sessions.length} sessions</span>
@@ -1020,13 +1040,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
 
       {modalOpen ? <AddSessionModal clients={clients} mutate={mutate} onClose={() => setModalOpen(false)} /> : null}
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button className="active"><UsersRound size={18} />Clients</button>
-        <button onClick={() => setActive("links")}>•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="clients" setActive={setActive} />
     </section>
   );
 }
@@ -1227,13 +1241,7 @@ function NotesPage({ notes = [], setActive, mutate, refresh, loading }) {
         </section>
       </div>
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button className="active">•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="notes" setActive={setActive} />
     </section>
   );
 }
@@ -1438,13 +1446,7 @@ function CalendarPage({ tasks, mutate, setActive }) {
         ) : null}
       </div>
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button className="active">•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="calendar" setActive={setActive} />
     </section>
   );
 }
@@ -1568,13 +1570,7 @@ function FinancesPage({ data, mutate, setActive }) {
         </section>
       </div>
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button className="active">•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="finances" setActive={setActive} />
     </section>
   );
 }
@@ -1727,13 +1723,7 @@ function OutreachPage({ records = [], setActive, mutate, refresh, loading }) {
         </div>
       </main>
 
-      <div className="bottom-nav">
-        <button onClick={() => setActive("dashboard")}><Home size={18} />Home</button>
-        <button onClick={() => setActive("tasks")}><Check size={18} />Tasks</button>
-        <button onClick={() => setActive("clients")}><UsersRound size={18} />Clients</button>
-        <button className="active">•••<span>More</span></button>
-        <button className="avatar">T</button>
-      </div>
+      <BottomNav active="outreach" setActive={setActive} />
     </section>
   );
 }
@@ -1856,6 +1846,41 @@ function isTaskDone(task) {
 function sortChecklistItems(a, b) {
   if (Boolean(a.done) !== Boolean(b.done)) return a.done ? 1 : -1;
   return 0;
+}
+
+function currentWeekCompletedSessions(sessions = []) {
+  const { start, end } = currentWeekRange();
+  return sessions.filter((session) => {
+    const date = parseIsoDate(session.nextSession);
+    if (!date || date < start || date > end) return false;
+    return isCompletedSession(session);
+  });
+}
+
+function currentWeekRange(reference = new Date()) {
+  const start = new Date(reference);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function parseIsoDate(value) {
+  if (!value) return null;
+  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isCompletedSession(session) {
+  const status = String(session?.status || "").toLowerCase();
+  if (!status || status.includes("cancel")) return false;
+  return ["complete", "completed", "closed", "done", "held", "paid", "attended"].some((word) => status.includes(word));
+}
+
+function sumSessionRates(sessions = []) {
+  return sessions.reduce((total, session) => total + Number(sessionRate(session) || 0), 0);
 }
 
 function mergeData(live) {

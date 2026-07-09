@@ -264,7 +264,15 @@ function mapLink(record) {
 
 function mapClient(record) {
   const f = record.fields || {};
-  return { id: record.id, name: pick(f, "Name", "Client", "Client Name"), status: pick(f, "Status"), email: pick(f, "Email"), nextSession: pick(f, "Next Session", "Session Date", "Date"), notes: pick(f, "Notes") };
+  return {
+    id: record.id,
+    name: pick(f, "Name", "Client", "Client Name"),
+    status: pick(f, "Status", "Session Status"),
+    email: pick(f, "Email"),
+    nextSession: pick(f, "Next Session", "Session Date", "Date"),
+    rate: pick(f, "Rate", "Session Rate", "Amount", "Session Amount"),
+    notes: pick(f, "Notes"),
+  };
 }
 
 function mapTodayItem(record) {
