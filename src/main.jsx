@@ -216,7 +216,13 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
   const [todayItems, setTodayItems] = useState(() => loadChecklistItems(today()));
   const [todayText, setTodayText] = useState("");
   const [busyQuickAdd, setBusyQuickAdd] = useState(false);
-  const airtableTodayItems = [...(data?.todayItems || [])].sort(sortChecklistItems);
+  const [todayDoneOverrides, setTodayDoneOverrides] = useState({});
+  const [savingTodayIds, setSavingTodayIds] = useState([]);
+  const [todayError, setTodayError] = useState("");
+  const airtableTodayItems = [...(data?.todayItems || [])]
+    .filter((item) => !item.done || Object.prototype.hasOwnProperty.call(todayDoneOverrides, item.id))
+    .map((item) => ({ ...item, done: todayDoneOverrides[item.id] ?? item.done }))
+    .sort(sortChecklistItems);
   const combinedTodayItems = [
     ...airtableTodayItems,
     ...todayItems.map((item) => ({ ...item, localOnly: true })),
@@ -273,7 +279,23 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
   }
 
   async function toggleAirtableTodayItem(item) {
-    await mutate("today.update", { ...item, done: !item.done });
+    const nextDone = !item.done;
+    setTodayError("");
+    setSavingTodayIds((ids) => [...new Set([...ids, item.id])]);
+    setTodayDoneOverrides((current) => ({ ...current, [item.id]: nextDone }));
+
+    try {
+      await mutate("today.update", { ...item, done: nextDone });
+    } catch (error) {
+      setTodayDoneOverrides((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      setTodayError(error.message || "Could not update this item in Airtable.");
+    } finally {
+      setSavingTodayIds((ids) => ids.filter((id) => id !== item.id));
+    }
   }
 
   function submit(event) {
@@ -336,19 +358,24 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
           {totalCount ? (
             <div className="today-list">
               {combinedTodayItems.map((item) => (
-                <label className="today-item" key={item.id}>
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => (item.localOnly ? toggleTodayItem(item.id) : toggleAirtableTodayItem(item))}
-                  />
+                <div className={`today-item ${item.done ? "done" : ""}`} key={item.id}>
+                  <button
+                    type="button"
+                    className={`today-check ${item.done ? "checked" : ""}`}
+                    disabled={savingTodayIds.includes(item.id)}
+                    onClick={() => (item.localOnly ? toggleTodayItem(item.id) : toggleAirtableTodayItem(item))}
+                    aria-label={item.done ? "Mark not done" : "Mark done"}
+                  >
+                    {item.done ? <Check size={16} /> : null}
+                  </button>
                   <span>{item.text}</span>
-                </label>
+                </div>
               ))}
             </div>
           ) : (
             <div className="empty-dashed">No Today I will items yet.</div>
           )}
+          {todayError ? <p className="form-error">{todayError}</p> : null}
         </form>
       </section>
     </main>

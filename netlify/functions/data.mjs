@@ -17,6 +17,12 @@ const TABLES = {
   debt: process.env.AIRTABLE_DEBT_TABLE || "Total Debt",
 };
 
+const TODAY_FIELDS = {
+  date: process.env.AIRTABLE_TODAY_DATE_FIELD || "Checklist Date",
+  text: process.env.AIRTABLE_TODAY_TEXT_FIELD || "Content",
+  done: process.env.AIRTABLE_TODAY_DONE_FIELD || "Done",
+};
+
 const OUTREACH_SOURCES = {
   sessionSpot: {
     baseId: "appQxIhwr00DmKBx5",
@@ -189,7 +195,13 @@ function fieldsFor(kind, payload) {
   if (kind === "notes") return { "Note Title": payload.title, Category: payload.category, Body: payload.content };
   if (kind === "links") return { Name: payload.title, Link: payload.url, Category: payload.category, Notes: payload.notes };
   if (kind === "clients") return { Name: payload.name, Status: payload.status, Email: payload.email, "Next Session": payload.nextSession, Notes: payload.notes };
-  if (kind === "today") return { "Checklist Date": payload.date, Content: payload.text, Done: Boolean(payload.done) };
+  if (kind === "today") {
+    const fields = {};
+    if (payload.date !== undefined) fields[TODAY_FIELDS.date] = payload.date;
+    if (payload.text !== undefined) fields[TODAY_FIELDS.text] = payload.text;
+    if (payload.done !== undefined) fields[TODAY_FIELDS.done] = Boolean(payload.done);
+    return fields;
+  }
   return {};
 }
 
@@ -222,11 +234,11 @@ function mapClient(record) {
 
 function mapTodayItem(record) {
   const f = record.fields || {};
-  const done = pick(f, "Done", "Completed", "Complete", "Checked", "Finished");
+  const done = pick(f, TODAY_FIELDS.done, "Done", "Completed", "Complete", "Checked", "Finished");
   return {
     id: record.id,
-    text: pick(f, "Content", "Item", "Task", "Task Name", "Title", "Name", "Today I will"),
-    date: pick(f, "Checklist Date", "Date", "Day"),
+    text: pick(f, TODAY_FIELDS.text, "Content", "Item", "Task", "Task Name", "Title", "Name", "Today I will"),
+    date: pick(f, TODAY_FIELDS.date, "Checklist Date", "Date", "Day"),
     done: done === true || String(done).toLowerCase() === "true" || String(done).toLowerCase() === "done" || String(done).toLowerCase() === "completed",
   };
 }

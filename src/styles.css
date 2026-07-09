@@ -493,6 +493,7 @@ textarea {
   border-radius: 24px;
   background: var(--cream);
   box-shadow: 0 18px 44px rgba(74, 36, 20, 0.12);
+  overflow: hidden;
 }
 
 .lock-hero,
@@ -644,11 +645,24 @@ textarea {
   border: 1px solid rgba(118, 72, 44, 0.13);
   border-radius: 22px;
   box-shadow: 0 16px 32px rgba(74, 36, 20, 0.08);
+  min-width: 0;
+}
+
+.home-card > * {
+  min-width: 0;
 }
 
 .phone-shell .locked-preview {
   margin: 16px;
+  max-width: calc(100% - 32px);
   background: #fffdf8;
+}
+
+.locked-preview input,
+.locked-preview textarea,
+.locked-preview button {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .locked-preview input:disabled,
@@ -681,11 +695,16 @@ textarea {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: start;
+  align-items: center;
+}
+
+.today-head h3 {
+  overflow-wrap: anywhere;
 }
 
 .today-head span {
   flex: 0 0 auto;
+  max-width: 48%;
   border: 1px solid #c9d9af;
   background: #edf4df;
   color: #43582c;
@@ -701,18 +720,38 @@ textarea {
 }
 
 .today-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: 12px;
   border: 1px solid rgba(223, 185, 153, 0.7);
   border-radius: 14px;
   font-weight: 800;
+  background: rgba(255, 250, 244, 0.72);
+  min-width: 0;
 }
 
-.today-item input {
-  width: auto;
-  min-height: auto;
+.today-check {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border: 2px solid rgba(47, 28, 19, 0.48);
+  border-radius: 7px;
+  padding: 0;
+  background: #fffdf8;
+  color: #fffdf8;
+  display: grid;
+  place-items: center;
+}
+
+.today-check.checked {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.today-check:disabled {
+  opacity: 0.62;
 }
 
 .today-item span {
@@ -721,9 +760,11 @@ textarea {
   letter-spacing: 0;
   font-size: 0.92rem;
   color: #4d372c;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
-.today-item input:checked + span {
+.today-item.done span {
   text-decoration: line-through;
   color: #8d776c;
 }
