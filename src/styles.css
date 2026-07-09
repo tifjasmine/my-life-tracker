@@ -2217,14 +2217,20 @@ textarea {
 }
 
 .carried-row {
+  width: 100%;
   min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: inherit;
   display: grid;
   grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 10px;
+  padding: 0;
   font-size: 0.82rem;
   font-weight: 900;
   text-transform: uppercase;
+  text-align: left;
 }
 
 .carried-row b {
@@ -2242,6 +2248,18 @@ textarea {
 .session-date-head i {
   height: 1px;
   background: rgba(118, 72, 44, 0.18);
+}
+
+.carried-row svg {
+  transition: transform 0.18s ease;
+}
+
+.carried-group.open .carried-row svg {
+  transform: rotate(180deg);
+}
+
+.carried-session-list {
+  padding: 8px 0 14px;
 }
 
 .session-groups {

@@ -941,6 +941,7 @@ function LinkLibraryCard({ link }) {
 function ClientsPage({ clients = [], setActive, mutate }) {
   const [tab, setTab] = useState("This Week");
   const [modalOpen, setModalOpen] = useState(false);
+  const [openCarried, setOpenCarried] = useState({});
   const sessions = clients.length ? clients : SAMPLE.clients;
   const weekSessions = currentWeekCompletedSessions(sessions);
   const weekPotential = 966;
@@ -948,15 +949,8 @@ function ClientsPage({ clients = [], setActive, mutate }) {
   const progress = Math.min(100, Math.round((earned / weekPotential) * 100));
   const closed = sessions.filter((client) => String(client.status || "").toLowerCase().includes("closed")).length;
   const grouped = groupSessions(sessions);
-  const carriedRows = [
-    ["Fri, Jun 19", 3],
-    ["Mon, Jun 22", 2],
-    ["Tue, Jun 23", 1],
-    ["Thu, Jun 25", 3],
-    ["Mon, Jun 29", 3],
-    ["Tue, Jun 30", 1],
-    ["Thu, Jul 2", 6],
-  ];
+  const carriedGroups = groupCarriedSessions(sessions);
+  const carriedTotal = Object.values(carriedGroups).reduce((total, records) => total + records.length, 0);
 
   return (
     <section className="clients-page">
@@ -1016,17 +1010,29 @@ function ClientsPage({ clients = [], setActive, mutate }) {
       <main className="clients-week">
         <div className="clients-week-head">
           <strong>Week of Jul 5</strong>
-          <span>{sessions.length} sessions · <b>{carriedRows.reduce((total, row) => total + row[1], 0)} carried over</b> <RefreshCw size={14} /></span>
+          <span>{sessions.length} sessions · <b>{carriedTotal} carried over</b> <RefreshCw size={14} /></span>
         </div>
         <div className="carried-list">
-          {carriedRows.map(([label, count]) => (
-            <div key={label} className="carried-row">
-              <span>△ Carried Over · {label}</span>
-              <b>{count}</b>
-              <i />
-              <ChevronDown size={14} />
-            </div>
+          {Object.entries(carriedGroups).map(([label, records]) => (
+            <section className={`carried-group ${openCarried[label] ? "open" : ""}`} key={label}>
+              <button
+                className="carried-row"
+                type="button"
+                onClick={() => setOpenCarried((current) => ({ ...current, [label]: !current[label] }))}
+              >
+                <span>△ Carried Over · {label}</span>
+                <b>{records.length}</b>
+                <i />
+                <ChevronDown size={14} />
+              </button>
+              {openCarried[label] ? (
+                <div className="carried-session-list">
+                  {records.map((session) => <SessionCard key={session.id} session={session} mutate={mutate} />)}
+                </div>
+              ) : null}
+            </section>
           ))}
+          {!carriedTotal ? <div className="empty-dashed">No carried-over sessions.</div> : null}
         </div>
         <div className="session-groups">
           {Object.entries(grouped).map(([date, records]) => (
@@ -2175,6 +2181,17 @@ function groupSessions(records = []) {
     groups[key].push(record);
     return groups;
   }, {});
+}
+
+function groupCarriedSessions(records = []) {
+  const { start } = currentWeekRange();
+  const carried = records.filter((record) => {
+    const date = parseIsoDate(record.nextSession);
+    if (!date || date >= start) return false;
+    if (String(record.status || "").toLowerCase().includes("cancel")) return false;
+    return !sessionChecklist(record).every((item) => item.done);
+  });
+  return groupSessions(carried);
 }
 
 function sessionRate(session) {
