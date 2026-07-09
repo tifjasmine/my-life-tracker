@@ -285,7 +285,7 @@ function LockScreen({ onUnlock, data, mutate, loading }) {
     setTodayDoneOverrides((current) => ({ ...current, [item.id]: nextDone }));
 
     try {
-      await mutate("today.update", { ...item, done: nextDone });
+      await mutate("today.update", { id: item.id, done: nextDone });
     } catch (error) {
       setTodayDoneOverrides((current) => {
         const next = { ...current };
