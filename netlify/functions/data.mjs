@@ -229,7 +229,15 @@ function fieldsFor(kind, payload) {
   }
   if (kind === "notes") return { "Note Title": payload.title, Category: payload.category, Body: payload.content };
   if (kind === "links") return { Name: payload.title, Link: payload.url, Category: payload.category, Notes: payload.notes };
-  if (kind === "clients") return { Name: payload.name, Status: payload.status, Email: payload.email, "Next Session": payload.nextSession, Notes: payload.notes };
+  if (kind === "clients") {
+    const fields = { Name: payload.name, Status: payload.status, Email: payload.email, "Next Session": payload.nextSession, Notes: payload.notes };
+    if (payload.rate !== undefined) fields["Session Price"] = Number(payload.rate || 0);
+    if (payload.sessionHeld !== undefined) fields["Session Held"] = Boolean(payload.sessionHeld);
+    if (payload.noteDone !== undefined) fields["Note Done"] = Boolean(payload.noteDone);
+    if (payload.nextSessionScheduled !== undefined) fields["Next Session Scheduled"] = Boolean(payload.nextSessionScheduled);
+    if (payload.nextSessionPrepared !== undefined) fields["Next Session Prepared"] = Boolean(payload.nextSessionPrepared);
+    return fields;
+  }
   if (kind === "today") {
     const fields = {};
     if (payload.date !== undefined) fields[TODAY_FIELDS.date] = payload.date;
@@ -270,7 +278,12 @@ function mapClient(record) {
     status: pick(f, "Status", "Session Status"),
     email: pick(f, "Email"),
     nextSession: pick(f, "Next Session", "Session Date", "Date"),
-    rate: pick(f, "Rate", "Session Rate", "Amount", "Session Amount"),
+    rate: pick(f, "Session Price", "Rate", "Session Rate", "Amount", "Session Amount"),
+    sessionHeld: Boolean(pick(f, "Session Held", "Held")),
+    noteDone: Boolean(pick(f, "Note Done", "Note")),
+    nextSessionScheduled: Boolean(pick(f, "Next Session Scheduled", "Scheduled")),
+    nextSessionPrepared: Boolean(pick(f, "Next Session Prepared", "Prepared")),
+    paid: Boolean(pick(f, "Paid")),
     notes: pick(f, "Notes"),
   };
 }

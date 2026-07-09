@@ -1032,7 +1032,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
           {Object.entries(grouped).map(([date, records]) => (
             <section key={date} className="session-group">
               <div className="session-date-head"><span>{date}</span><i /><ChevronDown size={14} /></div>
-              {records.map((session) => <SessionCard key={session.id} session={session} />)}
+              {records.map((session) => <SessionCard key={session.id} session={session} mutate={mutate} />)}
             </section>
           ))}
         </div>
@@ -1045,25 +1045,85 @@ function ClientsPage({ clients = [], setActive, mutate }) {
   );
 }
 
-function SessionCard({ session }) {
+function SessionCard({ session, mutate }) {
+  const [open, setOpen] = useState(false);
+  const [busyField, setBusyField] = useState("");
   const rate = sessionRate(session);
+  const tasks = sessionChecklist(session);
+  const doneCount = tasks.filter((task) => task.done).length;
+  const progress = Math.round((doneCount / tasks.length) * 100);
+
+  async function toggleSessionTask(task) {
+    setBusyField(task.key);
+    try {
+      await mutate("clients.update", { id: session.id, [task.key]: !task.done });
+    } finally {
+      setBusyField("");
+    }
+  }
+
   return (
-    <article className="session-card">
-      <div>
-        <strong>{session.name || "Client"}</strong>
-        {rate ? <span className="rate-pill">{money(rate)}</span> : null}
-        <p>{formatSessionDate(session.nextSession)} · {sessionTime(session)}</p>
-      </div>
-      <div className="session-progress-dots">
-        <i className="done" />
-        <i />
-        <i />
-        <i />
-      </div>
-      <span>1/4</span>
-      <ChevronDown size={16} />
+    <article className={`session-card ${open ? "open" : ""}`}>
+      <button className="session-summary" type="button" onClick={() => setOpen((value) => !value)}>
+        <div>
+          <strong>{session.name || "Client"}</strong>
+          {rate ? <span className="rate-pill">{money(rate)}</span> : null}
+          <p>{formatSessionDate(session.nextSession)} · {sessionTime(session)}</p>
+        </div>
+        <div className="session-progress-dots">
+          {tasks.map((task) => <i key={task.key} className={task.done ? "done" : ""} />)}
+        </div>
+        <span>{doneCount}/4</span>
+        <ChevronDown className="session-chevron" size={16} />
+      </button>
+      {open ? (
+        <div className="session-detail">
+          <div className="session-detail-head">
+            <span>{doneCount}/4 tasks done</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="progress-bar"><i style={{ width: `${progress}%` }} /></div>
+          <label>
+            <span>Session status</span>
+            <select value={session.status || "Upcoming"} onChange={(event) => mutate("clients.update", { id: session.id, status: event.target.value })}>
+              {["Upcoming", "Held", "Completed", "Canceled"].map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
+          <div className="session-task-list">
+            {tasks.map((task) => (
+              <button
+                type="button"
+                key={task.key}
+                className={task.done ? "done" : ""}
+                disabled={busyField === task.key}
+                onClick={() => toggleSessionTask(task)}
+              >
+                <span className="session-check">{task.done ? <Check size={15} /> : null}</span>
+                <span>
+                  <b>{task.label}</b>
+                  {task.detail ? <small>{task.detail}</small> : null}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="session-card-actions">
+            <button type="button"><Edit3 size={17} /> Edit</button>
+            <button type="button" className="danger"><Trash2 size={17} /> Delete</button>
+          </div>
+        </div>
+      ) : null}
     </article>
   );
+}
+
+function sessionChecklist(session) {
+  const rate = sessionRate(session);
+  return [
+    { key: "sessionHeld", label: "Session held", done: Boolean(session.sessionHeld), detail: rate ? money(rate) : "" },
+    { key: "noteDone", label: "Note done", done: Boolean(session.noteDone) },
+    { key: "nextSessionScheduled", label: "Next session scheduled", done: Boolean(session.nextSessionScheduled) },
+    { key: "nextSessionPrepared", label: "Next session prepared", done: Boolean(session.nextSessionPrepared) },
+  ];
 }
 
 function AddSessionModal({ clients = [], mutate, onClose }) {
@@ -1091,6 +1151,7 @@ function AddSessionModal({ clients = [], mutate, onClose }) {
         name: selected.name,
         status,
         nextSession: slashToIso(date),
+        rate,
         notes: [time ? `Time: ${time}` : "", duration ? `Duration: ${duration}` : "", rate ? `Rate: ${rate}` : "", notes].filter(Boolean).join("\n"),
       });
       onClose();
@@ -1875,7 +1936,8 @@ function parseIsoDate(value) {
 
 function isCompletedSession(session) {
   const status = String(session?.status || "").toLowerCase();
-  if (!status || status.includes("cancel")) return false;
+  if (status.includes("cancel")) return false;
+  if (session?.sessionHeld || session?.paid) return true;
   return ["complete", "completed", "closed", "done", "held", "paid", "attended"].some((word) => status.includes(word));
 }
 
