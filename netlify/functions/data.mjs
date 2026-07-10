@@ -230,8 +230,14 @@ function fieldsFor(kind, payload) {
   if (kind === "notes") return { "Note Title": payload.title, Category: payload.category, Body: payload.content };
   if (kind === "links") return { Name: payload.title, Link: payload.url, Category: payload.category, Notes: payload.notes };
   if (kind === "clients") {
-    const fields = { Name: payload.name, Status: payload.status, Email: payload.email, "Session Date": payload.nextSession, Notes: payload.notes };
+    const fields = {};
+    if (payload.name !== undefined) fields["Client Name"] = payload.name;
+    if (payload.status !== undefined) fields.Status = payload.status;
+    if (payload.nextSession !== undefined) fields["Session Date"] = payload.nextSession;
+    if (payload.weekOf !== undefined) fields["Week Of"] = payload.weekOf;
+    if (payload.notes !== undefined) fields.Notes = payload.notes;
     if (payload.rate !== undefined) fields["Session Price"] = Number(payload.rate || 0);
+    if (payload.duration !== undefined) fields["Session Duration"] = payload.duration;
     if (payload.sessionHeld !== undefined) fields["Session Held"] = Boolean(payload.sessionHeld);
     if (payload.noteDone !== undefined) fields["Note Done"] = Boolean(payload.noteDone);
     if (payload.nextSessionScheduled !== undefined) fields["Next Session Scheduled"] = Boolean(payload.nextSessionScheduled);
@@ -278,7 +284,10 @@ function mapClient(record) {
     status: pick(f, "Status", "Session Status"),
     email: pick(f, "Email"),
     nextSession: pick(f, "Session Date", "Date", "Start", "Start Time", "Appointment Date", "Next Session"),
+    weekOf: pick(f, "Week Of", "Week", "Week Start"),
     rate: pick(f, "Session Price", "Rate", "Session Rate", "Amount", "Session Amount"),
+    duration: pick(f, "Session Duration", "Duration"),
+    nextSessionDate: pick(f, "Next Session Date"),
     sessionHeld: Boolean(pick(f, "Session Held", "Held")),
     noteDone: Boolean(pick(f, "Note Done", "Note")),
     nextSessionScheduled: Boolean(pick(f, "Next Session Scheduled", "Scheduled")),

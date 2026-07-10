@@ -943,6 +943,8 @@ function ClientsPage({ clients = [], setActive, mutate }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [openCarried, setOpenCarried] = useState({});
   const sessions = clients.length ? clients : SAMPLE.clients;
+  const currentWeek = currentWeekRange();
+  const currentWeekLabel = weekOfLabel(currentWeek.start);
   const thisWeekSessions = currentWeekSessions(sessions);
   const weekSessions = currentWeekCompletedSessions(sessions);
   const weekPotential = 966;
@@ -994,7 +996,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
           <div className="practice-pills">
             <span><UsersRound size={15} /> {sessions.length} sessions</span>
             <span><Check size={15} /> {closed}/10 closed</span>
-            <span><BarChart3 size={15} /> week of Jul 5</span>
+            <span><BarChart3 size={15} /> {currentWeekLabel.toLowerCase()}</span>
           </div>
         </div>
       </section>
@@ -1010,7 +1012,7 @@ function ClientsPage({ clients = [], setActive, mutate }) {
 
       <main className="clients-week">
         <div className="clients-week-head">
-          <strong>Week of Jul 5</strong>
+          <strong>{currentWeekLabel}</strong>
           <span>{thisWeekSessions.length} sessions · <b>{carriedTotal} carried over</b> <RefreshCw size={14} /></span>
         </div>
         <div className="carried-list">
@@ -1159,6 +1161,7 @@ function AddSessionModal({ clients = [], mutate, onClose }) {
         name: selected.name,
         status,
         nextSession: slashToIso(date),
+        weekOf: weekStartIso(slashToIso(date)),
         rate,
         notes: [time ? `Time: ${time}` : "", duration ? `Duration: ${duration}` : "", rate ? `Rate: ${rate}` : "", notes].filter(Boolean).join("\n"),
       });
@@ -1918,19 +1921,17 @@ function sortChecklistItems(a, b) {
 }
 
 function currentWeekCompletedSessions(sessions = []) {
-  const { start, end } = currentWeekRange();
+  const currentWeek = dateToInputValue(currentWeekRange().start);
   return sessions.filter((session) => {
-    const date = parseIsoDate(session.nextSession);
-    if (!date || date < start || date > end) return false;
+    if (sessionWeekIso(session) !== currentWeek) return false;
     return isCompletedSession(session);
   });
 }
 
 function currentWeekSessions(sessions = []) {
-  const { start, end } = currentWeekRange();
+  const currentWeek = dateToInputValue(currentWeekRange().start);
   return sessions.filter((session) => {
-    const date = parseIsoDate(session.nextSession);
-    if (!date || date < start || date > end) return false;
+    if (sessionWeekIso(session) !== currentWeek) return false;
     return !String(session.status || "").toLowerCase().includes("cancel");
   });
 }
@@ -1946,9 +1947,64 @@ function currentWeekRange(reference = new Date()) {
 }
 
 function parseIsoDate(value) {
+  return parseDateValue(value);
+}
+
+function parseDateValue(value) {
   if (!value) return null;
-  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  const text = String(value).trim();
+  if (!text) return null;
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
+  if (iso) {
+    const [, year, month, day, hour = "12", minute = "00"] = iso;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const slash = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
+  if (slash) {
+    const [, month, day, year, rawHour, rawMinute, meridian] = slash;
+    let hour = rawHour ? Number(rawHour) : 12;
+    if (meridian?.toLowerCase() === "pm" && hour < 12) hour += 12;
+    if (meridian?.toLowerCase() === "am" && hour === 12) hour = 0;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), hour, rawMinute ? Number(rawMinute) : 0);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return null;
+  if (!hasTimeValue(text)) parsed.setHours(12, 0, 0, 0);
+  return parsed;
+}
+
+function dateToInputValue(date) {
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function weekStartForDate(date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  return start;
+}
+
+function weekStartIso(value) {
+  const date = parseDateValue(value);
+  return date ? dateToInputValue(weekStartForDate(date)) : "";
+}
+
+function sessionWeekIso(session) {
+  return weekStartIso(session?.weekOf) || weekStartIso(session?.nextSession);
+}
+
+function weekOfLabel(value) {
+  const date = parseDateValue(value);
+  if (!date) return "This Week";
+  return `Week of ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
+
+function hasTimeValue(value) {
+  return /T\d{2}:\d{2}|\b\d{1,2}:\d{2}\s*(?:AM|PM)?\b/i.test(String(value || ""));
 }
 
 function isCompletedSession(session) {
@@ -2187,7 +2243,7 @@ function uniqueClients(records = []) {
 function groupSessions(records = []) {
   const sorted = [...records]
     .filter((record) => parseIsoDate(record.nextSession))
-    .sort((a, b) => String(a.nextSession || "").localeCompare(String(b.nextSession || "")));
+    .sort((a, b) => parseIsoDate(a.nextSession) - parseIsoDate(b.nextSession));
   return sorted.reduce((groups, record) => {
     const key = shortSessionDay(record.nextSession);
     groups[key] = groups[key] || [];
@@ -2197,10 +2253,10 @@ function groupSessions(records = []) {
 }
 
 function groupCarriedSessions(records = []) {
-  const { start } = currentWeekRange();
+  const currentWeek = dateToInputValue(currentWeekRange().start);
   const carried = records.filter((record) => {
-    const date = parseIsoDate(record.nextSession);
-    if (!date || date >= start) return false;
+    const recordWeek = sessionWeekIso(record);
+    if (!recordWeek || recordWeek >= currentWeek) return false;
     if (String(record.status || "").toLowerCase().includes("cancel")) return false;
     return !sessionChecklist(record).every((item) => item.done);
   });
@@ -2219,12 +2275,16 @@ function sessionRate(session) {
 function sessionTime(session) {
   const notesTime = String(session?.notes || "").match(/time:\s*([^\n]+)/i)?.[1];
   if (notesTime) return notesTime;
+  const date = parseDateValue(session?.nextSession);
+  if (date && hasTimeValue(session?.nextSession)) {
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }
   const seed = String(session?.name || "").length % 5;
   return ["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"][seed];
 }
 
 function shortSessionDay(value) {
-  const date = value ? new Date(`${value}T12:00:00`) : new Date();
+  const date = parseDateValue(value) || new Date();
   if (Number.isNaN(date.getTime())) return "No date";
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
