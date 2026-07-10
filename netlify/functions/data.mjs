@@ -230,7 +230,7 @@ function fieldsFor(kind, payload) {
   if (kind === "notes") return { "Note Title": payload.title, Category: payload.category, Body: payload.content };
   if (kind === "links") return { Name: payload.title, Link: payload.url, Category: payload.category, Notes: payload.notes };
   if (kind === "clients") {
-    const fields = { Name: payload.name, Status: payload.status, Email: payload.email, "Next Session": payload.nextSession, Notes: payload.notes };
+    const fields = { Name: payload.name, Status: payload.status, Email: payload.email, "Session Date": payload.nextSession, Notes: payload.notes };
     if (payload.rate !== undefined) fields["Session Price"] = Number(payload.rate || 0);
     if (payload.sessionHeld !== undefined) fields["Session Held"] = Boolean(payload.sessionHeld);
     if (payload.noteDone !== undefined) fields["Note Done"] = Boolean(payload.noteDone);
@@ -277,7 +277,7 @@ function mapClient(record) {
     name: pick(f, "Name", "Client", "Client Name"),
     status: pick(f, "Status", "Session Status"),
     email: pick(f, "Email"),
-    nextSession: pick(f, "Next Session", "Session Date", "Date"),
+    nextSession: pick(f, "Session Date", "Date", "Start", "Start Time", "Appointment Date", "Next Session"),
     rate: pick(f, "Session Price", "Rate", "Session Rate", "Amount", "Session Amount"),
     sessionHeld: Boolean(pick(f, "Session Held", "Held")),
     noteDone: Boolean(pick(f, "Note Done", "Note")),
