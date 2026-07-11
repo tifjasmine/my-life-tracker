@@ -255,9 +255,35 @@ function fieldsFor(kind, payload) {
 }
 
 function financeFieldsFor(type, payload) {
-  if (type === "expenses") return { "Expense Name": payload.name, Month: payload.month, Amount: Number(payload.amount || 0), Category: payload.category, Frequency: payload.frequency, Notes: payload.notes };
-  if (type === "income") return { Source: payload.source, Month: payload.month, Amount: Number(payload.amount || 0), Income: payload.date };
-  if (type === "debt") return { Name: payload.name, Remaining: Number(payload.remaining || 0), Amount: Number(payload.payment || 0), "Last paid": payload.lastPaid };
+  if (type === "expenses") {
+    const fields = {};
+    if (payload.name !== undefined) fields["Expense Name"] = payload.name;
+    if (payload.month !== undefined) fields.Month = payload.month;
+    if (payload.year !== undefined) fields.Year = payload.year;
+    if (payload.amount !== undefined) fields.Amount = Number(payload.amount || 0);
+    if (payload.category !== undefined) fields.Category = payload.category;
+    if (payload.frequency !== undefined) fields.Frequency = payload.frequency;
+    if (payload.notes !== undefined) fields.Notes = payload.notes;
+    if (payload.paid !== undefined) fields.Paid = Boolean(payload.paid);
+    return fields;
+  }
+  if (type === "income") {
+    const fields = {};
+    if (payload.source !== undefined) fields.Source = payload.source;
+    if (payload.month !== undefined) fields.Month = payload.month;
+    if (payload.year !== undefined) fields.Year = payload.year;
+    if (payload.amount !== undefined) fields.Amount = Number(payload.amount || 0);
+    if (payload.date !== undefined) fields.Income = payload.date;
+    return fields;
+  }
+  if (type === "debt") {
+    const fields = {};
+    if (payload.name !== undefined) fields.Name = payload.name;
+    if (payload.remaining !== undefined) fields.Remaining = Number(payload.remaining || 0);
+    if (payload.payment !== undefined) fields.Amount = Number(payload.payment || 0);
+    if (payload.lastPaid !== undefined) fields["Last paid"] = payload.lastPaid;
+    return fields;
+  }
   return {};
 }
 
@@ -310,12 +336,14 @@ function mapTodayItem(record) {
 
 function mapExpense(record) {
   const f = record.fields || {};
-  return { id: record.id, name: pick(f, "Expense Name", "Name"), month: pick(f, "Month"), amount: num(pick(f, "Amount", "Paid Amount", "Expense Amount", "Total")), paid: Boolean(pick(f, "Paid")), category: pick(f, "Category"), frequency: pick(f, "Frequency"), notes: pick(f, "Notes") };
+  const paid = pick(f, "Paid", "Paid?", "Complete", "Completed");
+  const status = pick(f, "Status", "Payment Status");
+  return { id: record.id, name: pick(f, "Expense Name", "Name"), month: pick(f, "Month"), year: pick(f, "Year"), date: pick(f, "Date", "Due Date", "Expense Date"), amount: num(pick(f, "Amount", "Paid Amount", "Expense Amount", "Total")), paid: isChecked(paid) || String(status).toLowerCase().includes("paid"), category: pick(f, "Category"), frequency: pick(f, "Frequency"), notes: pick(f, "Notes") };
 }
 
 function mapIncome(record) {
   const f = record.fields || {};
-  return { id: record.id, date: pick(f, "Income", "Date"), amount: num(pick(f, "Amount")), source: pick(f, "Source"), month: pick(f, "Month") };
+  return { id: record.id, date: pick(f, "Income", "Date"), amount: num(pick(f, "Amount")), source: pick(f, "Source"), month: pick(f, "Month"), year: pick(f, "Year") };
 }
 
 function mapDebt(record) {
@@ -362,6 +390,12 @@ function unique(values) {
 
 function num(value) {
   return Number(value || 0);
+}
+
+function isChecked(value) {
+  if (value === true) return true;
+  const text = String(value || "").toLowerCase();
+  return text === "true" || text === "yes" || text === "paid" || text === "done" || text === "complete" || text === "completed";
 }
 
 function respond(body, statusCode = 200) {

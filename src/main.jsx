@@ -1529,9 +1529,11 @@ function FinancesPage({ data, mutate, setActive }) {
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState(monthName());
   const [year, setYear] = useState(String(new Date().getFullYear()));
-  const expenses = data?.expenses || [];
-  const income = data?.income || [];
+  const allExpenses = data?.expenses || [];
+  const allIncome = data?.income || [];
   const debt = data?.debt || [];
+  const expenses = allExpenses.filter((record) => financeRecordMatchesPeriod(record, month, year));
+  const income = allIncome.filter((record) => financeRecordMatchesPeriod(record, month, year));
   const expenseTotal = sum(expenses, "amount");
   const paidTotal = sum(expenses.filter((item) => item.paid), "amount");
   const unpaidTotal = sum(expenses.filter((item) => !item.paid), "amount");
@@ -1548,7 +1550,7 @@ function FinancesPage({ data, mutate, setActive }) {
   });
 
   async function togglePaid(record) {
-    await mutate("finances.expenses.update", { ...record, paid: !record.paid });
+    await mutate("finances.expenses.update", { id: record.id, paid: !record.paid });
   }
 
   async function deleteExpense(record) {
@@ -1895,10 +1897,14 @@ async function connectGoogle(setConnected, setEvents) {
 }
 
 function summarize(data) {
-  const expenses = sum(data.finances?.expenses, "amount");
-  const income = sum(data.finances?.income, "amount");
+  const currentMonth = monthName();
+  const currentYear = String(new Date().getFullYear());
+  const currentExpenses = (data.finances?.expenses || []).filter((record) => financeRecordMatchesPeriod(record, currentMonth, currentYear));
+  const currentIncome = (data.finances?.income || []).filter((record) => financeRecordMatchesPeriod(record, currentMonth, currentYear));
+  const expenses = sum(currentExpenses, "amount");
+  const income = sum(currentIncome, "amount");
   const debt = sum(data.finances?.debt, "remaining");
-  const unpaid = sum((data.finances?.expenses || []).filter((item) => !item.paid), "amount");
+  const unpaid = sum(currentExpenses.filter((item) => !item.paid), "amount");
   return {
     openTasks: (data.tasks || []).filter((task) => String(task.status || "").toLowerCase() !== "done").length,
     clients: data.clients?.length || 0,
@@ -2042,6 +2048,28 @@ function filterRecords(records = [], query, keys) {
 
 function sum(records = [], key) {
   return records.reduce((total, record) => total + Number(record[key] || 0), 0);
+}
+
+function financeRecordMatchesPeriod(record, month, year) {
+  const monthNumber = monthIndex(month);
+  const selectedYear = String(year || "");
+  const recordMonth = monthIndex(record?.month);
+  const recordYear = String(record?.year || "").trim();
+  const recordDate = parseDateValue(record?.date);
+  const dateMatchesMonth = recordDate ? recordDate.getMonth() === monthNumber : false;
+  const dateMatchesYear = recordDate ? String(recordDate.getFullYear()) === selectedYear : false;
+  const monthMatches = recordMonth >= 0 ? recordMonth === monthNumber : dateMatchesMonth;
+  const yearMatches = recordYear ? recordYear === selectedYear : recordDate ? dateMatchesYear : true;
+  return monthMatches && yearMatches;
+}
+
+function monthIndex(value) {
+  if (value === undefined || value === null || value === "") return -1;
+  const text = String(value).trim();
+  const numeric = Number(text);
+  if (Number.isFinite(numeric) && numeric >= 1 && numeric <= 12) return numeric - 1;
+  const short = text.slice(0, 3).toLowerCase();
+  return ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(short);
 }
 
 function today() {
