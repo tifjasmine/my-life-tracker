@@ -341,7 +341,7 @@ function mapExpense(record) {
 
 function mapIncome(record) {
   const f = record.fields || {};
-  return { id: record.id, date: pick(f, "Income", "Date"), amount: num(pick(f, "Amount")), source: pick(f, "Source"), month: pick(f, "Month"), year: pick(f, "Year") };
+  return { id: record.id, date: pick(f, "Income", "Date"), amount: num(pick(f, "Amount")), source: pick(f, "Source"), month: pick(f, "Month", "Income Month", "Month Year", "Billing Month"), year: pick(f, "Year") };
 }
 
 function mapDebt(record) {
