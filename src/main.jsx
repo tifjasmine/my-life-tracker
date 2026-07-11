@@ -1703,7 +1703,7 @@ function FinanceAddModal({ kind, month, year, mutate, onClose }) {
   const currentMonthLabel = financeMonthLabel(month, year);
   const [form, setForm] = useState(() => ({
     name: "",
-    source: "",
+    source: "Alma",
     amount: "",
     category: "",
     frequency: "Monthly",
@@ -1784,7 +1784,9 @@ function FinanceAddModal({ kind, month, year, mutate, onClose }) {
           <>
             <label className="wide">
               <span>Source *</span>
-              <input value={form.source} onChange={(event) => update("source", event.target.value)} placeholder="Income source" required />
+              <select value={form.source} onChange={(event) => update("source", event.target.value)} required>
+                {INCOME_SOURCES.map((source) => <option key={source}>{source}</option>)}
+              </select>
             </label>
             <label>
               <span>Amount *</span>
@@ -1802,6 +1804,8 @@ function FinanceAddModal({ kind, month, year, mutate, onClose }) {
     </div>
   );
 }
+
+const INCOME_SOURCES = ["Alma", "Headway", "Grow", "Charlie Health", "Rula"];
 
 function OutreachPage({ records = [], setActive, mutate, refresh, loading }) {
   const [source, setSource] = useState("All sources");
