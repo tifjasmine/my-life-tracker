@@ -17,6 +17,10 @@ const TABLES = {
   debt: process.env.AIRTABLE_DEBT_TABLE || "Total Debt",
 };
 
+const VIEWS = {
+  expenses: process.env.AIRTABLE_EXPENSES_VIEW || process.env.FINANCE_AIRTABLE_VIEW_ID || "viwApnuoD9z5KTLE1",
+};
+
 const TODAY_FIELDS = {
   date: process.env.AIRTABLE_TODAY_DATE_FIELD || "Checklist Date",
   text: process.env.AIRTABLE_TODAY_TEXT_FIELD || "Content",
@@ -82,7 +86,7 @@ async function loadDashboard() {
     safeList(LIFE_BASE_ID, TABLES.links, mapLink),
     safeList(LIFE_BASE_ID, TABLES.clients, mapClient),
     safeList(LIFE_BASE_ID, TABLES.today, mapTodayItem),
-    safeList(FINANCE_BASE_ID, TABLES.expenses, mapExpense),
+    safeList(FINANCE_BASE_ID, TABLES.expenses, mapExpense, { view: VIEWS.expenses }),
     safeList(FINANCE_BASE_ID, TABLES.income, mapIncome),
     safeList(FINANCE_BASE_ID, TABLES.debt, mapDebt),
     loadOutreach(),
@@ -158,19 +162,20 @@ async function loadOutreach() {
   return groups.flat();
 }
 
-async function safeList(baseId, table, mapper) {
+async function safeList(baseId, table, mapper, options = {}) {
   try {
-    return await listRecords(baseId, table, mapper);
+    return await listRecords(baseId, table, mapper, options);
   } catch {
     return [];
   }
 }
 
-async function listRecords(baseId, table, mapper) {
+async function listRecords(baseId, table, mapper, options = {}) {
   let offset = "";
   const records = [];
   do {
     const params = new URLSearchParams({ pageSize: "100" });
+    if (options.view) params.set("view", options.view);
     if (offset) params.set("offset", offset);
     const json = await airtable(baseId, table, `?${params.toString()}`);
     records.push(...(json.records || []).map(mapper));

@@ -1533,7 +1533,7 @@ function FinancesPage({ data, mutate, setActive }) {
   const allExpenses = data?.expenses || [];
   const allIncome = data?.income || [];
   const debt = data?.debt || [];
-  const expenses = allExpenses.filter((record) => financeRecordMatchesPeriod(record, month, year));
+  const expenses = allExpenses;
   const income = allIncome.filter((record) => financeRecordMatchesPeriod(record, month, year));
   const expenseTotal = sum(expenses, "amount");
   const paidTotal = sum(expenses.filter((item) => item.paid), "amount");
@@ -2019,7 +2019,7 @@ async function connectGoogle(setConnected, setEvents) {
 function summarize(data) {
   const currentMonth = monthName();
   const currentYear = String(new Date().getFullYear());
-  const currentExpenses = (data.finances?.expenses || []).filter((record) => financeRecordMatchesPeriod(record, currentMonth, currentYear));
+  const currentExpenses = data.finances?.expenses || [];
   const currentIncome = (data.finances?.income || []).filter((record) => financeRecordMatchesPeriod(record, currentMonth, currentYear));
   const expenses = sum(currentExpenses, "amount");
   const income = sum(currentIncome, "amount");
