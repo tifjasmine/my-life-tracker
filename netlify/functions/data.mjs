@@ -338,7 +338,7 @@ function mapExpense(record) {
   const f = record.fields || {};
   const paid = pick(f, "Paid", "Paid?", "Complete", "Completed");
   const status = pick(f, "Status", "Payment Status");
-  return { id: record.id, name: pick(f, "Expense Name", "Name"), month: pick(f, "Month"), year: pick(f, "Year"), date: pick(f, "Date", "Due Date", "Expense Date"), amount: num(pick(f, "Amount", "Paid Amount", "Expense Amount", "Total")), paid: isChecked(paid) || String(status).toLowerCase().includes("paid"), category: pick(f, "Category"), frequency: pick(f, "Frequency"), notes: pick(f, "Notes") };
+  return { id: record.id, name: pick(f, "Expense Name", "Name"), month: pick(f, "Month"), year: pick(f, "Year"), date: pick(f, "Date", "Due Date", "Expense Date"), amount: num(pick(f, "Amount", "Paid Amount", "Expense Amount", "Total")), paid: isChecked(paid) || isPaidStatus(status), category: pick(f, "Category"), frequency: pick(f, "Frequency"), notes: pick(f, "Notes") };
 }
 
 function mapIncome(record) {
@@ -396,6 +396,11 @@ function isChecked(value) {
   if (value === true) return true;
   const text = String(value || "").toLowerCase();
   return text === "true" || text === "yes" || text === "paid" || text === "done" || text === "complete" || text === "completed";
+}
+
+function isPaidStatus(value) {
+  const text = String(value || "").trim().toLowerCase();
+  return text === "paid" || text === "complete" || text === "completed";
 }
 
 function respond(body, statusCode = 200) {

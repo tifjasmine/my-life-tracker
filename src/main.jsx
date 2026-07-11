@@ -2054,13 +2054,17 @@ function financeRecordMatchesPeriod(record, month, year) {
   const monthNumber = monthIndex(month);
   const selectedYear = String(year || "");
   const recordMonth = monthIndex(record?.month);
-  const recordYear = String(record?.year || "").trim();
+  const recordYear = String(record?.year || yearFromText(record?.month) || "").trim();
   const recordDate = parseDateValue(record?.date);
   const dateMatchesMonth = recordDate ? recordDate.getMonth() === monthNumber : false;
   const dateMatchesYear = recordDate ? String(recordDate.getFullYear()) === selectedYear : false;
   const monthMatches = recordMonth >= 0 ? recordMonth === monthNumber : dateMatchesMonth;
   const yearMatches = recordYear ? recordYear === selectedYear : recordDate ? dateMatchesYear : true;
   return monthMatches && yearMatches;
+}
+
+function yearFromText(value) {
+  return String(value || "").match(/\b(20\d{2})\b/)?.[1] || "";
 }
 
 function monthIndex(value) {
