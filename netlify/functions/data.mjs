@@ -12,7 +12,7 @@ const TABLES = {
   links: process.env.AIRTABLE_LINKS_TABLE || process.env.LINKS_TABLE_ID || "tblyaYNEozqaeFWnp",
   clients: process.env.AIRTABLE_CLIENTS_TABLE || "Weekly Sessions",
   today: process.env.AIRTABLE_TODAY_TABLE || process.env.AIRTABLE_TODAY_I_WILL_TABLE || "Today I will",
-  expenses: process.env.AIRTABLE_EXPENSES_TABLE || process.env.FINANCE_AIRTABLE_TABLE_ID || "tblTe5SntepDSbEpS",
+  expenses: process.env.AIRTABLE_EXPENSES_TABLE || "Expenses By Month",
   income: process.env.AIRTABLE_INCOME_TABLE || "Income",
   debt: process.env.AIRTABLE_DEBT_TABLE || "Total Debt",
 };

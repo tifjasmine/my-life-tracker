@@ -39,7 +39,6 @@ If finances live in a separate Airtable base, add:
 
 ```bash
 FINANCE_AIRTABLE_BASE_ID=appVlWgUhBB73PDa4
-FINANCE_AIRTABLE_TABLE_ID=tblTe5SntepDSbEpS
 ```
 
 Optional Google Calendar:
