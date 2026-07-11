@@ -2056,6 +2056,8 @@ function financeRecordMatchesPeriod(record, month, year) {
   const recordMonth = monthIndex(record?.month);
   const recordYear = String(record?.year || yearFromText(record?.month) || "").trim();
   const recordDate = parseDateValue(record?.date);
+  const hasPeriod = recordMonth >= 0 || Boolean(recordYear) || Boolean(recordDate);
+  if (!hasPeriod) return true;
   const dateMatchesMonth = recordDate ? recordDate.getMonth() === monthNumber : false;
   const dateMatchesYear = recordDate ? String(recordDate.getFullYear()) === selectedYear : false;
   const monthMatches = recordMonth >= 0 ? recordMonth === monthNumber : dateMatchesMonth;
