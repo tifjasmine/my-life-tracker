@@ -1529,6 +1529,7 @@ function FinancesPage({ data, mutate, setActive }) {
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState(monthName());
   const [year, setYear] = useState(String(new Date().getFullYear()));
+  const [addKind, setAddKind] = useState("");
   const allExpenses = data?.expenses || [];
   const allIncome = data?.income || [];
   const debt = data?.debt || [];
@@ -1611,6 +1612,10 @@ function FinancesPage({ data, mutate, setActive }) {
               {item === "expenses" ? "📋" : item === "income" ? "💵" : "🏦"} {capitalize(item)}
             </button>
           ))}
+          <div className="finance-add-actions">
+            <button onClick={() => setAddKind("expenses")}><Plus size={16} /> Expense</button>
+            <button onClick={() => setAddKind("income")}><Plus size={16} /> Income</button>
+          </div>
         </div>
 
         {tab === "expenses" ? (
@@ -1643,6 +1648,16 @@ function FinancesPage({ data, mutate, setActive }) {
           {!filtered.length ? <div className="empty-dashed">Nothing in this view.</div> : null}
         </section>
       </div>
+
+      {addKind ? (
+        <FinanceAddModal
+          kind={addKind}
+          month={month}
+          year={year}
+          mutate={mutate}
+          onClose={() => setAddKind("")}
+        />
+      ) : null}
 
       <BottomNav active="finances" setActive={setActive} />
     </section>
@@ -1679,6 +1694,111 @@ function FinanceRow({ record, tab, onTogglePaid, onDelete }) {
       <button className="finance-edit" aria-label="Edit finance item">✎</button>
       <button className="finance-delete" onClick={onDelete} aria-label="Delete finance item">×</button>
     </article>
+  );
+}
+
+function FinanceAddModal({ kind, month, year, mutate, onClose }) {
+  const isExpense = kind === "expenses";
+  const [form, setForm] = useState(() => ({
+    name: "",
+    source: "",
+    amount: "",
+    category: "",
+    frequency: "Monthly",
+    notes: "",
+    date: today(),
+  }));
+  const [busy, setBusy] = useState(false);
+
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    const amount = Number(form.amount || 0);
+    if (!amount) return;
+    const financeMonth = financeMonthLabel(month, year);
+    setBusy(true);
+    try {
+      if (isExpense) {
+        await mutate("finances.expenses.create", {
+          name: form.name.trim(),
+          month: financeMonth,
+          amount,
+          category: form.category.trim(),
+          frequency: form.frequency,
+          notes: form.notes.trim(),
+          paid: false,
+        });
+      } else {
+        await mutate("finances.income.create", {
+          source: form.source.trim(),
+          month: financeMonth,
+          amount,
+          date: form.date,
+        });
+      }
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <form className="session-modal finance-add-modal" onSubmit={submit}>
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Close"><X size={26} /></button>
+        <h2>Add {isExpense ? "Expense" : "Income"}</h2>
+        <p className="finance-modal-period">{month} {year}</p>
+        {isExpense ? (
+          <>
+            <label className="wide">
+              <span>Expense *</span>
+              <input value={form.name} onChange={(event) => update("name", event.target.value)} placeholder="Expense name" required />
+            </label>
+            <label>
+              <span>Amount *</span>
+              <input value={form.amount} onChange={(event) => update("amount", event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" required />
+            </label>
+            <label>
+              <span>Category</span>
+              <input value={form.category} onChange={(event) => update("category", event.target.value)} placeholder="Business, Personal..." />
+            </label>
+            <label>
+              <span>Frequency</span>
+              <select value={form.frequency} onChange={(event) => update("frequency", event.target.value)}>
+                <option>Monthly</option>
+                <option>One-time</option>
+                <option>Weekly</option>
+                <option>Annual</option>
+              </select>
+            </label>
+            <label className="wide">
+              <span>Notes</span>
+              <textarea value={form.notes} onChange={(event) => update("notes", event.target.value)} />
+            </label>
+          </>
+        ) : (
+          <>
+            <label className="wide">
+              <span>Source *</span>
+              <input value={form.source} onChange={(event) => update("source", event.target.value)} placeholder="Income source" required />
+            </label>
+            <label>
+              <span>Amount *</span>
+              <input value={form.amount} onChange={(event) => update("amount", event.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" required />
+            </label>
+            <label>
+              <span>Date</span>
+              <input type="date" value={form.date} onChange={(event) => update("date", event.target.value)} />
+            </label>
+          </>
+        )}
+        <button className="session-submit" disabled={busy}>{busy ? <Loader2 className="spin" size={18} /> : null} Add {isExpense ? "Expense" : "Income"}</button>
+        <button className="session-cancel" type="button" onClick={onClose}>Cancel</button>
+      </form>
+    </div>
   );
 }
 
@@ -2067,6 +2187,10 @@ function financeRecordMatchesPeriod(record, month, year) {
 
 function yearFromText(value) {
   return String(value || "").match(/\b(20\d{2})\b/)?.[1] || "";
+}
+
+function financeMonthLabel(month, year) {
+  return `${month || monthName()} ${year || new Date().getFullYear()}`;
 }
 
 function monthIndex(value) {

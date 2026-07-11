@@ -259,7 +259,6 @@ function financeFieldsFor(type, payload) {
     const fields = {};
     if (payload.name !== undefined) fields["Expense Name"] = payload.name;
     if (payload.month !== undefined) fields.Month = payload.month;
-    if (payload.year !== undefined) fields.Year = payload.year;
     if (payload.amount !== undefined) fields.Amount = Number(payload.amount || 0);
     if (payload.category !== undefined) fields.Category = payload.category;
     if (payload.frequency !== undefined) fields.Frequency = payload.frequency;
@@ -271,7 +270,6 @@ function financeFieldsFor(type, payload) {
     const fields = {};
     if (payload.source !== undefined) fields.Source = payload.source;
     if (payload.month !== undefined) fields.Month = payload.month;
-    if (payload.year !== undefined) fields.Year = payload.year;
     if (payload.amount !== undefined) fields.Amount = Number(payload.amount || 0);
     if (payload.date !== undefined) fields.Income = payload.date;
     return fields;

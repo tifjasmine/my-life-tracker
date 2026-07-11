@@ -2896,6 +2896,8 @@ textarea {
 
 .finance-tabs {
   display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   margin-top: 16px;
   border-radius: 11px;
@@ -2917,6 +2919,29 @@ textarea {
 .finance-tabs button.active {
   background: #fffdf9;
   box-shadow: 0 2px 8px rgba(74, 36, 20, 0.08);
+}
+
+.finance-add-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.finance-add-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--brown);
+  color: var(--cream);
+}
+
+.finance-modal-period {
+  grid-column: 1 / -1;
+  margin: -14px 0 4px;
+  text-align: center;
+  color: #8a715c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
 }
 
 .expense-progress-card {
