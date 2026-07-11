@@ -17,10 +17,6 @@ const TABLES = {
   debt: process.env.AIRTABLE_DEBT_TABLE || "Total Debt",
 };
 
-const VIEWS = {
-  expenses: process.env.AIRTABLE_EXPENSES_VIEW || process.env.FINANCE_AIRTABLE_VIEW_ID || "viwApnuoD9z5KTLE1",
-};
-
 const TODAY_FIELDS = {
   date: process.env.AIRTABLE_TODAY_DATE_FIELD || "Checklist Date",
   text: process.env.AIRTABLE_TODAY_TEXT_FIELD || "Content",
@@ -86,7 +82,7 @@ async function loadDashboard() {
     safeList(LIFE_BASE_ID, TABLES.links, mapLink),
     safeList(LIFE_BASE_ID, TABLES.clients, mapClient),
     safeList(LIFE_BASE_ID, TABLES.today, mapTodayItem),
-    safeList(FINANCE_BASE_ID, TABLES.expenses, mapExpense, { view: VIEWS.expenses }),
+    safeList(FINANCE_BASE_ID, TABLES.expenses, mapExpense),
     safeList(FINANCE_BASE_ID, TABLES.income, mapIncome),
     safeList(FINANCE_BASE_ID, TABLES.debt, mapDebt),
     loadOutreach(),
@@ -341,7 +337,26 @@ function mapExpense(record) {
   const f = record.fields || {};
   const paid = pick(f, "Paid", "Paid?", "Complete", "Completed");
   const status = pick(f, "Status", "Payment Status");
-  return { id: record.id, name: pick(f, "Expense Name", "Name"), month: pick(f, "Month", "Expense Month", "Month Year", "Billing Month"), year: pick(f, "Year"), date: pick(f, "Date", "Due Date", "Expense Date"), amount: num(pick(f, "Amount", "Paid Amount", "Expense Amount", "Total")), paid: isChecked(paid) || isPaidStatus(status), category: pick(f, "Category"), frequency: pick(f, "Frequency"), notes: pick(f, "Notes") };
+  const amount = num(pick(f, "Amount", "Paid Amount", "Expense Amount", "Total"));
+  const paidAmount = maybeNum(pick(f, "Amount Paid", "Paid Total", "Paid Amount Actual"));
+  const unpaidAmount = maybeNum(pick(f, "Unpaid Amount", "Unpaid", "Still Owe", "Still Owed", "Remaining Owed"));
+  const isPaid = isChecked(paid) || isPaidStatus(status);
+  const renewal = pick(f, "Renewal");
+  return {
+    id: record.id,
+    name: pick(f, "Expense Name", "Name"),
+    month: pick(f, "Month") || monthFromDateValue(renewal),
+    year: pick(f, "Year"),
+    date: pick(f, "Date", "Due Date", "Expense Date"),
+    amount,
+    paidAmount: paidAmount === null ? (isPaid ? amount : 0) : paidAmount,
+    unpaidAmount: unpaidAmount === null ? (isPaid ? 0 : amount) : unpaidAmount,
+    paid: isPaid,
+    renewal,
+    category: pick(f, "Category"),
+    frequency: pick(f, "Frequency"),
+    notes: pick(f, "Notes")
+  };
 }
 
 function mapIncome(record) {
@@ -394,6 +409,21 @@ function unique(values) {
 function num(value) {
   return Number(value || 0);
 }
+
+function maybeNum(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(String(value).replace(/[$,]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function monthFromDateValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function isChecked(value) {
   if (value === true) return true;

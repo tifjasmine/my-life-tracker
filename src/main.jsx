@@ -1530,14 +1530,15 @@ function FinancesPage({ data, mutate, setActive }) {
   const [month, setMonth] = useState(monthName());
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [addKind, setAddKind] = useState("");
+  const currentMonthLabel = financeMonthLabel(month, year);
   const allExpenses = data?.expenses || [];
   const allIncome = data?.income || [];
   const debt = data?.debt || [];
-  const expenses = allExpenses;
-  const income = allIncome.filter((record) => financeRecordMatchesPeriod(record, month, year));
+  const expenses = allExpenses.filter((record) => record.month === currentMonthLabel);
+  const income = allIncome.filter((record) => record.month === currentMonthLabel);
   const expenseTotal = sum(expenses, "amount");
-  const paidTotal = sum(expenses.filter((item) => item.paid), "amount");
-  const unpaidTotal = sum(expenses.filter((item) => !item.paid), "amount");
+  const paidTotal = sum(expenses, "paidAmount");
+  const unpaidTotal = sum(expenses, "unpaidAmount");
   const incomeTotal = sum(income, "amount");
   const debtTotal = sum(debt, "remaining");
   const paymentTotal = sum(debt, "payment");
@@ -1545,7 +1546,7 @@ function FinancesPage({ data, mutate, setActive }) {
   const records = tab === "expenses" ? expenses : tab === "income" ? income : debt;
   const filtered = records.filter((record) => {
     const term = search.trim().toLowerCase();
-    const paidMatch = tab !== "expenses" || status === "All" || (status === "Paid" ? record.paid : !record.paid);
+    const paidMatch = tab !== "expenses" || status === "All" || (status === "Paid" ? Number(record.paidAmount || 0) > 0 : Number(record.unpaidAmount || 0) > 0);
     const termMatch = !term || [record.name, record.source, record.category, record.frequency, record.notes].some((value) => String(value || "").toLowerCase().includes(term));
     return paidMatch && termMatch;
   });
@@ -1699,6 +1700,7 @@ function FinanceRow({ record, tab, onTogglePaid, onDelete }) {
 
 function FinanceAddModal({ kind, month, year, mutate, onClose }) {
   const isExpense = kind === "expenses";
+  const currentMonthLabel = financeMonthLabel(month, year);
   const [form, setForm] = useState(() => ({
     name: "",
     source: "",
@@ -1718,13 +1720,12 @@ function FinanceAddModal({ kind, month, year, mutate, onClose }) {
     event.preventDefault();
     const amount = Number(form.amount || 0);
     if (!amount) return;
-    const financeMonth = financeMonthLabel(month, year);
     setBusy(true);
     try {
       if (isExpense) {
         await mutate("finances.expenses.create", {
           name: form.name.trim(),
-          month: financeMonth,
+          month: currentMonthLabel,
           amount,
           category: form.category.trim(),
           frequency: form.frequency,
@@ -1734,7 +1735,7 @@ function FinanceAddModal({ kind, month, year, mutate, onClose }) {
       } else {
         await mutate("finances.income.create", {
           source: form.source.trim(),
-          month: financeMonth,
+          month: currentMonthLabel,
           amount,
           date: form.date,
         });
@@ -2019,12 +2020,13 @@ async function connectGoogle(setConnected, setEvents) {
 function summarize(data) {
   const currentMonth = monthName();
   const currentYear = String(new Date().getFullYear());
-  const currentExpenses = data.finances?.expenses || [];
-  const currentIncome = (data.finances?.income || []).filter((record) => financeRecordMatchesPeriod(record, currentMonth, currentYear));
+  const currentMonthLabel = financeMonthLabel(currentMonth, currentYear);
+  const currentExpenses = (data.finances?.expenses || []).filter((record) => record.month === currentMonthLabel);
+  const currentIncome = (data.finances?.income || []).filter((record) => record.month === currentMonthLabel);
   const expenses = sum(currentExpenses, "amount");
   const income = sum(currentIncome, "amount");
   const debt = sum(data.finances?.debt, "remaining");
-  const unpaid = sum(currentExpenses.filter((item) => !item.paid), "amount");
+  const unpaid = sum(currentExpenses, "unpaidAmount");
   return {
     openTasks: (data.tasks || []).filter((task) => String(task.status || "").toLowerCase() !== "done").length,
     clients: data.clients?.length || 0,
